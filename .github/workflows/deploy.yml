@@ -31,5 +31,8 @@ jobs:
           --platform managed \
           --region asia-northeast1 \
           --service-account lyra-backend@lyra-backend-425003.iam.gserviceaccount.com \
-          --allow-unauthenticated
+          --allow-unauthenticated \
+          --port 8080 \
+          --timeout 10m \
+          --memory 1Gi
 

@@ -204,5 +204,19 @@ async def download_all(session_id: str):
     )
 
 
+# 添加健康检查接口
+@app.get("/health")
+async def health_check():
+    """健康检查接口"""
+    return {"status": "healthy"}
+
+
 if __name__ == "__main__":
-    uvicorn.run(app, host="0.0.0.0", port=8000) 
+    # 获取PORT环境变量，如果不存在则默认为8000
+    port = int(os.environ.get("PORT", 8000))
+    
+    # 打印启动信息
+    print(f"Starting server on port {port}...")
+    
+    # 启动服务器，监听所有网络接口
+    uvicorn.run(app, host="0.0.0.0", port=port) 

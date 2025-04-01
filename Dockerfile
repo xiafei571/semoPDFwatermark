@@ -14,8 +14,11 @@ RUN mkdir -p /app/static /app/uploads /app/results
 # 安装依赖
 RUN pip install --no-cache-dir -r requirements_web.txt
 
-# 暴露端口
-EXPOSE 8000
+# 设置环境变量
+ENV PORT 8080
 
-# 启动应用
-CMD ["python", "app.py"] 
+# 暴露端口
+EXPOSE 8080
+
+# 设置入口点
+ENTRYPOINT ["python", "app.py"] 
