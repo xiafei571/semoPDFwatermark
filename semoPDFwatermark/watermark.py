@@ -12,6 +12,29 @@ import platform
 # 根据操作系统注册中文字体
 def register_chinese_font():
     """注册中文字体，根据不同操作系统选择适合的字体"""
+    # Docker/Linux环境常用的中文字体路径
+    docker_fonts = [
+        # WenQuanYi Micro Hei
+        "/usr/share/fonts/truetype/wqy/wqy-microhei.ttc",
+        # WenQuanYi Zen Hei
+        "/usr/share/fonts/truetype/wqy/wqy-zenhei.ttc",
+        # Noto Sans CJK
+        "/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc",
+        "/usr/share/fonts/truetype/noto/NotoSansCJK-Regular.ttc",
+    ]
+    
+    # 先检查Docker/Linux环境字体
+    for font_path in docker_fonts:
+        if os.path.exists(font_path):
+            font_name = os.path.basename(font_path).split('.')[0].replace("-", "")
+            try:
+                pdfmetrics.registerFont(TTFont(font_name, font_path))
+                print(f"成功注册中文字体: {font_name} ({font_path})")
+                return font_name
+            except Exception as e:
+                print(f"注册字体失败 {font_path}: {e}")
+    
+    # 其他操作系统字体检测
     system = platform.system()
     font_path = None
     font_name = "SimSun"  # 默认字体名称
@@ -48,10 +71,20 @@ def register_chinese_font():
     if font_path and os.path.exists(font_path):
         try:
             pdfmetrics.registerFont(TTFont(font_name, font_path))
+            print(f"成功注册中文字体: {font_name} ({font_path})")
             return font_name
         except Exception as e:
             print(f"注册字体失败: {e}")
+            
+    # 尝试使用已注册的字体
+    try:
+        # 以下是ReportLab内置的支持中文的字体
+        pdfmetrics.registerFont(TTFont('STSong-Light', 'STSong-Light', 'UniGB-UCS2-H'))
+        return 'STSong-Light'
+    except:
+        pass
     
+    print("无法找到合适的中文字体，将使用默认字体")
     return None  # 如果无法找到合适的中文字体，返回None
 
 
@@ -106,9 +139,14 @@ class PDFWatermarker:
         # 如果有中文字符且注册了中文字体，则使用中文字体
         if has_chinese and self.chinese_font:
             fontname = self.chinese_font
+            print(f"检测到中文文本，使用字体: {fontname}")
         
         # 设置字体和大小
-        c.setFont(fontname, fontsize)
+        try:
+            c.setFont(fontname, fontsize)
+        except Exception as e:
+            print(f"设置字体 {fontname} 失败: {e}, 将使用默认字体")
+            c.setFont("Helvetica", fontsize)  # 使用默认字体
         
         # 设置颜色和透明度
         r, g, b = color
