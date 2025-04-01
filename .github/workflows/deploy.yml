@@ -1,0 +1,35 @@
+name: Deploy to Cloud Run
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v2
+
+    - name: Set up Cloud SDK
+      uses: google-github-actions/setup-gcloud@v0.2.0
+      with:
+        version: 'latest'
+        service_account_key: ${{ secrets.GCP_CLOUD_RUN_KEY }}
+        project_id: lyra-backend-425003
+
+    - name: Build and push Docker image
+      run: |
+        gcloud builds submit --tag gcr.io/lyra-backend-425003/semoPDFwatermark
+
+    - name: Deploy to Cloud Run
+      run: |
+        gcloud run deploy semoPDFwatermark \
+          --image gcr.io/lyra-backend-425003/semoPDFwatermark \
+          --platform managed \
+          --region asia-northeast1 \
+          --service-account lyra-backend@lyra-backend-425003.iam.gserviceaccount.com \
+          --allow-unauthenticated
+

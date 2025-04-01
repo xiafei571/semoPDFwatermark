@@ -19,7 +19,7 @@
 
 1. 克隆此仓库:
    ```
-   git clone https://github.com/yourusername/semoPDFwatermark.git
+   git clone https://github.com/xiafei571/semoPDFwatermark.git
    cd semoPDFwatermark
    ```
 
