@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>处理结果 - PDF水印添加工具</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            padding-top: 2rem;
+            padding-bottom: 2rem;
+            background-color: #f8f9fa;
+        }
+        .result-container {
+            background-color: white;
+            border-radius: 10px;
+            box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+            padding: 2rem;
+            margin-bottom: 2rem;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+        .table-responsive {
+            margin-bottom: 1.5rem;
+        }
+        .footer-buttons {
+            display: flex;
+            justify-content: space-between;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-lg-8">
+                <div class="header">
+                    <h1>处理完成！</h1>
+                    <p class="lead">您的PDF文件已成功添加水印</p>
+                </div>
+                
+                <div class="result-container">
+                    <div class="alert alert-success" role="alert">
+                        <h4 class="alert-heading">成功处理 {{ results|length }} 个文件</h4>
+                        <p>您可以单独下载每个文件，或者一次性下载所有文件的压缩包。</p>
+                    </div>
+                    
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>原始文件</th>
+                                    <th>处理后文件</th>
+                                    <th>操作</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for result in results %}
+                                <tr>
+                                    <td>{{ result.original }}</td>
+                                    <td>{{ result.processed }}</td>
+                                    <td>
+                                        <a href="{{ result.download_url }}" class="btn btn-sm btn-primary" download>
+                                            下载
+                                        </a>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    <div class="footer-buttons">
+                        <a href="/" class="btn btn-secondary">返回首页</a>
+                        <a href="/download-all/{{ session_id }}" class="btn btn-success" download>
+                            下载所有文件 (ZIP)
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html> 

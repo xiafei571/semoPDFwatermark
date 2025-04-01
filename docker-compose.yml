@@ -1,0 +1,12 @@
+version: '3'
+
+services:
+  pdf-watermark:
+    build: .
+    container_name: pdf-watermark
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./uploads:/app/uploads
+      - ./results:/app/results
+    restart: unless-stopped 

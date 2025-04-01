@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PDF水印添加工具</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            padding-top: 2rem;
+            padding-bottom: 2rem;
+            background-color: #f8f9fa;
+        }
+        .form-container {
+            background-color: white;
+            border-radius: 10px;
+            box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+            padding: 2rem;
+            margin-bottom: 2rem;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+        .dropzone {
+            border: 2px dashed #ccc;
+            border-radius: 5px;
+            padding: 60px 20px;
+            text-align: center;
+            margin-bottom: 1.5rem;
+            background-color: #f9f9f9;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        .dropzone:hover, .dropzone.dragover {
+            border-color: #6c757d;
+            background-color: #f0f0f0;
+        }
+        .dropzone p {
+            font-size: 1.2rem;
+            color: #6c757d;
+            margin-bottom: 0;
+        }
+        .file-list {
+            margin-top: 1rem;
+        }
+        .file-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background-color: #e9ecef;
+            padding: 0.5rem 1rem;
+            border-radius: 5px;
+            margin-bottom: 0.5rem;
+        }
+        .remove-file {
+            color: #dc3545;
+            cursor: pointer;
+        }
+        .color-preview {
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            display: inline-block;
+            margin-left: 10px;
+            border: 1px solid #ced4da;
+        }
+        .slider-value {
+            display: inline-block;
+            min-width: 40px;
+            text-align: center;
+            margin-left: 10px;
+        }
+        .file-info {
+            margin-top: 1rem;
+            font-size: 0.9rem;
+            color: #6c757d;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-lg-8">
+                <div class="header">
+                    <h1>PDF水印添加工具</h1>
+                    <p class="lead">给多个PDF文件批量添加水印</p>
+                </div>
+                
+                <div class="form-container">
+                    {% if error %}
+                    <div class="alert alert-danger" role="alert">
+                        {{ error }}
+                    </div>
+                    {% endif %}
+                    
+                    <form action="/add-watermark" method="post" enctype="multipart/form-data" id="watermarkForm">
+                        <div class="mb-4">
+                            <label for="fileInput" class="form-label">选择PDF文件</label>
+                            <div class="dropzone" id="dropzone">
+                                <p>拖放PDF文件到这里，或点击上传</p>
+                            </div>
+                            <input type="file" id="fileInput" name="files" accept=".pdf" multiple class="d-none">
+                            <div class="file-list" id="fileList"></div>
+                            <div class="file-info">已选择 <span id="fileCount">0</span> 个文件</div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="watermarkText" class="form-label">水印文本</label>
+                            <input type="text" class="form-control" id="watermarkText" name="watermark_text" placeholder="输入水印文本，如：机密文件" required>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="pagesize" class="form-label">页面大小</label>
+                                <select class="form-select" id="pagesize" name="pagesize">
+                                    <option value="letter">Letter</option>
+                                    <option value="a4">A4</option>
+                                </select>
+                            </div>
+                            
+                            <div class="col-md-6 mb-3">
+                                <label for="fontname" class="form-label">字体名称</label>
+                                <select class="form-select" id="fontname" name="fontname">
+                                    <option value="Helvetica">Helvetica</option>
+                                    <option value="Courier">Courier</option>
+                                    <option value="Times-Roman">Times-Roman</option>
+                                </select>
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="fontsize" class="form-label">字体大小</label>
+                                <div class="d-flex align-items-center">
+                                    <input type="range" class="form-range" min="20" max="120" value="60" id="fontsize" name="fontsize">
+                                    <span class="slider-value" id="fontsizeValue">60</span>
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-6 mb-3">
+                                <label for="opacity" class="form-label">不透明度</label>
+                                <div class="d-flex align-items-center">
+                                    <input type="range" class="form-range" min="0.1" max="1" step="0.1" value="0.3" id="opacity" name="opacity">
+                                    <span class="slider-value" id="opacityValue">0.3</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="angle" class="form-label">旋转角度</label>
+                                <div class="d-flex align-items-center">
+                                    <input type="range" class="form-range" min="0" max="360" value="45" id="angle" name="angle">
+                                    <span class="slider-value" id="angleValue">45°</span>
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-6 mb-3">
+                                <label for="color" class="form-label">颜色 (RGB 0-1)</label>
+                                <div class="input-group">
+                                    <input type="text" class="form-control" id="color" name="color" value="0,0,0" placeholder="格式：r,g,b，如：0,0,0">
+                                    <span class="color-preview" id="colorPreview"></span>
+                                </div>
+                                <div class="form-text">格式：r,g,b，值范围 0-1，如黑色：0,0,0，红色：1,0,0</div>
+                            </div>
+                        </div>
+                        
+                        <div class="d-grid gap-2 mt-4">
+                            <button type="submit" class="btn btn-primary btn-lg" id="submitBtn">添加水印</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // 获取DOM元素
+            const dropzone = document.getElementById('dropzone');
+            const fileInput = document.getElementById('fileInput');
+            const fileList = document.getElementById('fileList');
+            const fileCount = document.getElementById('fileCount');
+            const colorInput = document.getElementById('color');
+            const colorPreview = document.getElementById('colorPreview');
+            const submitBtn = document.getElementById('submitBtn');
+            
+            // 获取滑块元素和值显示元素
+            const fontsize = document.getElementById('fontsize');
+            const fontsizeValue = document.getElementById('fontsizeValue');
+            const opacity = document.getElementById('opacity');
+            const opacityValue = document.getElementById('opacityValue');
+            const angle = document.getElementById('angle');
+            const angleValue = document.getElementById('angleValue');
+            
+            // 设置滑块事件监听
+            fontsize.addEventListener('input', function() {
+                fontsizeValue.textContent = this.value;
+            });
+            
+            opacity.addEventListener('input', function() {
+                opacityValue.textContent = this.value;
+            });
+            
+            angle.addEventListener('input', function() {
+                angleValue.textContent = this.value + '°';
+            });
+            
+            // 更新颜色预览
+            function updateColorPreview() {
+                const colorValues = colorInput.value.split(',').map(val => parseFloat(val));
+                if (colorValues.length === 3) {
+                    const r = Math.round(colorValues[0] * 255);
+                    const g = Math.round(colorValues[1] * 255);
+                    const b = Math.round(colorValues[2] * 255);
+                    colorPreview.style.backgroundColor = `rgb(${r}, ${g}, ${b})`;
+                }
+            }
+            
+            // 初始化颜色预览
+            updateColorPreview();
+            
+            // 监听颜色输入变化
+            colorInput.addEventListener('input', updateColorPreview);
+            
+            // 点击上传区域触发文件选择
+            dropzone.addEventListener('click', function() {
+                fileInput.click();
+            });
+            
+            // 处理拖放效果
+            ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+                dropzone.addEventListener(eventName, function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                }, false);
+            });
+            
+            ['dragenter', 'dragover'].forEach(eventName => {
+                dropzone.addEventListener(eventName, function() {
+                    dropzone.classList.add('dragover');
+                }, false);
+            });
+            
+            ['dragleave', 'drop'].forEach(eventName => {
+                dropzone.addEventListener(eventName, function() {
+                    dropzone.classList.remove('dragover');
+                }, false);
+            });
+            
+            // 处理文件拖放
+            dropzone.addEventListener('drop', function(e) {
+                const droppedFiles = e.dataTransfer.files;
+                updateFileList(droppedFiles);
+            });
+            
+            // 处理文件选择
+            fileInput.addEventListener('change', function() {
+                updateFileList(fileInput.files);
+            });
+            
+            // 更新文件列表显示
+            function updateFileList(selectedFiles) {
+                fileList.innerHTML = ''; // 清空列表
+                
+                if (selectedFiles && selectedFiles.length > 0) {
+                    for (let i = 0; i < selectedFiles.length; i++) {
+                        const file = selectedFiles[i];
+                        
+                        // 只处理PDF文件
+                        if (file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf')) {
+                            const fileItem = document.createElement('div');
+                            fileItem.className = 'file-item';
+                            fileItem.innerHTML = `
+                                <span>${file.name} (${formatFileSize(file.size)})</span>
+                            `;
+                            fileList.appendChild(fileItem);
+                        }
+                    }
+                    
+                    // 更新文件计数
+                    fileCount.textContent = selectedFiles.length;
+                } else {
+                    fileCount.textContent = '0';
+                }
+                
+                // 确保表单有效性
+                checkFormValidity();
+            }
+            
+            // 检查表单有效性
+            function checkFormValidity() {
+                // 禁用或启用提交按钮
+                submitBtn.disabled = fileInput.files.length === 0;
+            }
+            
+            // 格式化文件大小
+            function formatFileSize(bytes) {
+                if (bytes === 0) return '0 Bytes';
+                const k = 1024;
+                const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
+                const i = Math.floor(Math.log(bytes) / Math.log(k));
+                return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+            }
+        });
+    </script>
+</body>
+</html> 
