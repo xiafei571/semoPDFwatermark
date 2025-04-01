@@ -22,12 +22,12 @@ jobs:
 
     - name: Build and push Docker image
       run: |
-        gcloud builds submit --tag gcr.io/lyra-backend-425003/semoPDFwatermark
+        gcloud builds submit --tag gcr.io/lyra-backend-425003/semopdfwatermark:latest
 
     - name: Deploy to Cloud Run
       run: |
         gcloud run deploy semoPDFwatermark \
-          --image gcr.io/lyra-backend-425003/semoPDFwatermark \
+          --image gcr.io/lyra-backend-425003/semopdfwatermark:latest \
           --platform managed \
           --region asia-northeast1 \
           --service-account lyra-backend@lyra-backend-425003.iam.gserviceaccount.com \
