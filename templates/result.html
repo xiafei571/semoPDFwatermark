@@ -28,6 +28,7 @@
         .footer-buttons {
             display: flex;
             justify-content: space-between;
+            align-items: center;
         }
         .file-item {
             display: flex;
@@ -38,6 +39,22 @@
             border-radius: 5px;
             margin-bottom: 0.8rem;
             box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        .btn-group {
+            display: flex;
+            gap: 10px;
+        }
+        @media (max-width: 767px) {
+            .footer-buttons {
+                flex-direction: column;
+                gap: 15px;
+            }
+            .footer-buttons a {
+                width: 100%;
+            }
+            .btn-group {
+                width: 100%;
+            }
         }
     </style>
 </head>
@@ -71,9 +88,12 @@
                     
                     <div class="footer-buttons">
                         <a href="/" class="btn btn-secondary">返回首页</a>
-                        <a href="/download-all/{{ session_id }}" class="btn btn-success" download>
-                            下载所有文件 (ZIP)
-                        </a>
+                        <div class="btn-group">
+                            <a href="/regenerate/{{ session_id }}" class="btn btn-warning">复用此水印</a>
+                            <a href="/download-all/{{ session_id }}" class="btn btn-success" download>
+                                下载所有文件 (ZIP)
+                            </a>
+                        </div>
                     </div>
                 </div>
             </div>

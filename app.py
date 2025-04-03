@@ -150,12 +150,29 @@ async def add_watermark(
             {"request": request, "error": "没有找到有效的PDF文件进行处理"}
         )
     
+    # 保存配置参数到配置文件
+    config_path = os.path.join(session_dir, "config.json")
+    config = {
+        "watermark_text": watermark_text,
+        "pagesize": pagesize,
+        "fontname": fontname,
+        "fontsize": fontsize,
+        "opacity": opacity,
+        "angle": angle,
+        "color": color
+    }
+    
+    with open(config_path, "w", encoding="utf-8") as f:
+        import json
+        json.dump(config, f, ensure_ascii=False)
+    
     return templates.TemplateResponse(
         "result.html", 
         {
             "request": request, 
             "results": result_files,
-            "session_id": session_id
+            "session_id": session_id,
+            "config": config  # 传递配置参数到结果页面
         }
     )
 
@@ -201,6 +218,33 @@ async def download_all(session_id: str):
         zip_path,
         media_type="application/zip",
         filename=zip_filename
+    )
+
+
+@app.get("/regenerate/{session_id}")
+async def regenerate(request: Request, session_id: str):
+    """使用保存的配置重新生成水印"""
+    config_path = os.path.join("results", session_id, "config.json")
+    
+    # 如果配置文件不存在，则重定向到首页
+    if not os.path.exists(config_path):
+        return templates.TemplateResponse(
+            "index.html", 
+            {"request": request, "error": "配置信息不存在，无法重新生成"}
+        )
+    
+    # 读取配置文件
+    with open(config_path, "r", encoding="utf-8") as f:
+        import json
+        config = json.load(f)
+    
+    # 返回带有预填参数的首页
+    return templates.TemplateResponse(
+        "index.html", 
+        {
+            "request": request,
+            "config": config  # 传递配置参数
+        }
     )
 
 
