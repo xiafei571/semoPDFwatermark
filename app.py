@@ -11,7 +11,19 @@ import uvicorn
 from urllib.parse import quote
 
 from semoPDFwatermark import PDFWatermarker
-from config.app_config import APP_VERSION
+
+# 应用版本号
+APP_VERSION = "1.1.1"
+
+# 默认配置
+DEFAULT_CONFIG = {
+    "pagesize": "letter",
+    "fontname": "Helvetica", 
+    "fontsize": 60,
+    "opacity": 0.3,
+    "angle": 45,
+    "color": "0,0,0"
+}
 
 # 创建应用
 app = FastAPI(title="PDF水印添加工具")
