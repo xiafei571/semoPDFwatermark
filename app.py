@@ -10,6 +10,7 @@ from fastapi.staticfiles import StaticFiles
 import uvicorn
 
 from semoPDFwatermark import PDFWatermarker
+from config.app_config import APP_VERSION
 
 # 创建应用
 app = FastAPI(title="PDF水印添加工具")
@@ -27,7 +28,7 @@ templates = Jinja2Templates(directory="templates")
 @app.get("/", response_class=HTMLResponse)
 async def home(request: Request):
     """首页"""
-    return templates.TemplateResponse("index.html", {"request": request})
+    return templates.TemplateResponse("index.html", {"request": request, "version": APP_VERSION})
 
 
 @app.post("/add-watermark")
@@ -47,7 +48,7 @@ async def add_watermark(
     if not files:
         return templates.TemplateResponse(
             "index.html", 
-            {"request": request, "error": "请选择至少一个PDF文件"}
+            {"request": request, "error": "请选择至少一个PDF文件", "version": APP_VERSION}
         )
     
     # 处理颜色参数
@@ -58,7 +59,7 @@ async def add_watermark(
     except ValueError as e:
         return templates.TemplateResponse(
             "index.html", 
-            {"request": request, "error": f"颜色格式错误: {str(e)}"}
+            {"request": request, "error": f"颜色格式错误: {str(e)}", "version": APP_VERSION}
         )
     
     # 创建一个会话ID用于保存文件
@@ -133,7 +134,7 @@ async def add_watermark(
         print(f"处理出错: {str(e)}")
         return templates.TemplateResponse(
             "index.html", 
-            {"request": request, "error": f"处理文件时出错: {str(e)}"}
+            {"request": request, "error": f"处理文件时出错: {str(e)}", "version": APP_VERSION}
         )
     
     # 处理完成后删除上传的文件
@@ -147,7 +148,7 @@ async def add_watermark(
     if not result_files:
         return templates.TemplateResponse(
             "index.html", 
-            {"request": request, "error": "没有找到有效的PDF文件进行处理"}
+            {"request": request, "error": "没有找到有效的PDF文件进行处理", "version": APP_VERSION}
         )
     
     # 保存配置参数到配置文件
@@ -172,7 +173,8 @@ async def add_watermark(
             "request": request, 
             "results": result_files,
             "session_id": session_id,
-            "config": config  # 传递配置参数到结果页面
+            "config": config,  # 传递配置参数到结果页面
+            "version": APP_VERSION
         }
     )
 
@@ -230,7 +232,7 @@ async def regenerate(request: Request, session_id: str):
     if not os.path.exists(config_path):
         return templates.TemplateResponse(
             "index.html", 
-            {"request": request, "error": "配置信息不存在，无法重新生成"}
+            {"request": request, "error": "配置信息不存在，无法重新生成", "version": APP_VERSION}
         )
     
     # 读取配置文件
@@ -243,7 +245,8 @@ async def regenerate(request: Request, session_id: str):
         "index.html", 
         {
             "request": request,
-            "config": config  # 传递配置参数
+            "config": config,  # 传递配置参数
+            "version": APP_VERSION
         }
     )
 
