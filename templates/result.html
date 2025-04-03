@@ -29,6 +29,16 @@
             display: flex;
             justify-content: space-between;
         }
+        .file-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background-color: #f8f9fa;
+            padding: 0.8rem 1rem;
+            border-radius: 5px;
+            margin-bottom: 0.8rem;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
     </style>
 </head>
 <body>
@@ -46,29 +56,17 @@
                         <p>您可以单独下载每个文件，或者一次性下载所有文件的压缩包。</p>
                     </div>
                     
-                    <div class="table-responsive">
-                        <table class="table table-striped">
-                            <thead>
-                                <tr>
-                                    <th>原始文件</th>
-                                    <th>处理后文件</th>
-                                    <th>操作</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for result in results %}
-                                <tr>
-                                    <td>{{ result.original }}</td>
-                                    <td>{{ result.processed }}</td>
-                                    <td>
-                                        <a href="{{ result.download_url }}" class="btn btn-sm btn-primary" download>
-                                            下载
-                                        </a>
-                                    </td>
-                                </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
+                    <h5 class="mb-3">处理后的文件：</h5>
+                    
+                    <div class="files-list mb-4">
+                        {% for result in results %}
+                        <div class="file-item">
+                            <span>{{ result.processed }}</span>
+                            <a href="{{ result.download_url }}" class="btn btn-sm btn-primary" download>
+                                下载
+                            </a>
+                        </div>
+                        {% endfor %}
                     </div>
                     
                     <div class="footer-buttons">
