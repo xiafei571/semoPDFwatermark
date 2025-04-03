@@ -8,6 +8,7 @@ from fastapi.responses import FileResponse, HTMLResponse
 from fastapi.templating import Jinja2Templates
 from fastapi.staticfiles import StaticFiles
 import uvicorn
+from urllib.parse import quote
 
 from semoPDFwatermark import PDFWatermarker
 from config.app_config import APP_VERSION
@@ -180,16 +181,29 @@ async def add_watermark(
 
 
 @app.get("/download/{session_id}/{filename}")
-async def download_file(session_id: str, filename: str):
+async def download_file(session_id: str, filename: str, request: Request):
     """下载处理后的文件"""
     file_path = os.path.join("results", session_id, filename)
     if not os.path.exists(file_path):
         return {"error": "文件不存在"}
     
+    # 获取请求头中的Referer，检查是否带有download参数
+    referer = request.headers.get("referer", "")
+    is_download = "download" in referer or request.headers.get("sec-fetch-dest") == "download"
+    
+    headers = {}
+    if is_download:
+        # 如果是下载请求，设置Content-Disposition为attachment
+        headers["Content-Disposition"] = f"attachment; filename*=UTF-8''{quote(filename)}"
+    else:
+        # 如果是预览请求，设置Content-Disposition为inline
+        headers["Content-Disposition"] = f"inline; filename*=UTF-8''{quote(filename)}"
+    
     return FileResponse(
         file_path,
         media_type="application/pdf",
-        filename=filename
+        filename=filename,
+        headers=headers
     )
 
 
@@ -213,13 +227,19 @@ async def download_all(session_id: str):
     with zipfile.ZipFile(zip_path, 'w', zipfile.ZIP_DEFLATED) as zipf:
         for file in files:
             file_path = os.path.join(session_dir, file)
-            if os.path.isfile(file_path):
+            if os.path.isfile(file_path) and not file.endswith("config.json"):
                 zipf.write(file_path, arcname=file)
+    
+    # 设置响应头，确保作为附件下载
+    headers = {
+        "Content-Disposition": f"attachment; filename*=UTF-8''{quote(zip_filename)}"
+    }
     
     return FileResponse(
         zip_path,
         media_type="application/zip",
-        filename=zip_filename
+        filename=zip_filename,
+        headers=headers
     )
 
 
