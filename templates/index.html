@@ -76,6 +76,44 @@
             font-size: 0.9rem;
             color: #6c757d;
         }
+        .watermark-preview-container {
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 1rem;
+            margin: 1.5rem 0;
+            background-color: #fff;
+            position: relative;
+            overflow: hidden;
+            height: 297px;
+            width: 210px;
+            max-width: 100%;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        .watermark-preview-title {
+            font-size: 1rem;
+            margin-bottom: 0.5rem;
+            color: #495057;
+            text-align: center;
+        }
+        .watermark-text {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) rotate(-45deg);
+            transform-origin: center;
+            font-family: Helvetica, Arial, sans-serif;
+            white-space: nowrap;
+            color: rgba(0, 0, 0, 0.3);
+            font-size: 20px;
+            transform-origin: center;
+        }
+        @media (max-width: 767px) {
+            .watermark-preview-container {
+                height: 240px;
+                width: 170px;
+            }
+        }
     </style>
 </head>
 <body>
@@ -166,6 +204,12 @@
                             </div>
                         </div>
                         
+                        <!-- 水印预览区域 -->
+                        <div class="watermark-preview-container">
+                            <div class="watermark-preview-title">水印预览：</div>
+                            <div class="watermark-text" id="watermarkPreview">水印文本</div>
+                        </div>
+                        
                         <div class="d-grid gap-2 mt-4">
                             <button type="submit" class="btn btn-primary btn-lg" id="submitBtn">添加水印</button>
                         </div>
@@ -194,6 +238,64 @@
             const angle = document.getElementById('angle');
             const angleValue = document.getElementById('angleValue');
             
+            // 获取水印预览元素
+            const watermarkText = document.getElementById('watermarkText');
+            const watermarkPreview = document.getElementById('watermarkPreview');
+            const fontname = document.getElementById('fontname');
+            
+            // 更新水印预览函数
+            function updateWatermarkPreview() {
+                // 更新水印文本
+                watermarkPreview.textContent = watermarkText.value || '水印文本';
+                
+                // 更新字体大小 - 按比例缩小
+                watermarkPreview.style.fontSize = (fontsize.value / 3) + 'px';
+                
+                // 更新旋转角度
+                watermarkPreview.style.transform = `translate(-50%, -50%) rotate(-${angle.value}deg)`;
+                
+                // 更新透明度
+                watermarkPreview.style.opacity = opacity.value;
+                
+                // 更新颜色
+                const colorValues = colorInput.value.split(',').map(val => parseFloat(val));
+                if (colorValues.length === 3) {
+                    const r = Math.round(colorValues[0] * 255);
+                    const g = Math.round(colorValues[1] * 255);
+                    const b = Math.round(colorValues[2] * 255);
+                    watermarkPreview.style.color = `rgba(${r}, ${g}, ${b}, ${opacity.value})`;
+                }
+                
+                // 更新字体
+                if (fontname.value === 'Helvetica') {
+                    watermarkPreview.style.fontFamily = 'Helvetica, Arial, sans-serif';
+                } else if (fontname.value === 'Courier') {
+                    watermarkPreview.style.fontFamily = 'Courier, monospace';
+                } else if (fontname.value === 'Times-Roman') {
+                    watermarkPreview.style.fontFamily = 'Times New Roman, serif';
+                }
+            }
+            
+            // 监听所有控件的变化
+            watermarkText.addEventListener('input', updateWatermarkPreview);
+            fontsize.addEventListener('input', function() {
+                fontsizeValue.textContent = this.value;
+                updateWatermarkPreview();
+            });
+            opacity.addEventListener('input', function() {
+                opacityValue.textContent = this.value;
+                updateWatermarkPreview();
+            });
+            angle.addEventListener('input', function() {
+                angleValue.textContent = this.value + '°';
+                updateWatermarkPreview();
+            });
+            fontname.addEventListener('change', updateWatermarkPreview);
+            colorInput.addEventListener('input', function() {
+                updateColorPreview();
+                updateWatermarkPreview();
+            });
+            
             // 设置滑块事件监听
             fontsize.addEventListener('input', function() {
                 fontsizeValue.textContent = this.value;
@@ -218,8 +320,9 @@
                 }
             }
             
-            // 初始化颜色预览
+            // 初始化颜色预览和水印预览
             updateColorPreview();
+            updateWatermarkPreview();
             
             // 监听颜色输入变化
             colorInput.addEventListener('input', updateColorPreview);
