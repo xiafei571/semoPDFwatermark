@@ -81,8 +81,13 @@
                 
                 <div class="result-container">
                     <div class="alert alert-success" role="alert">
-                        <h4 class="alert-heading">成功处理 {{ results|length }} 个文件</h4>
-                        <p>您可以单独下载每个文件，或者一次性下载所有文件的压缩包。</p>
+                        <h4 class="alert-heading">成功处理 {{ successful_count }} 个文件</h4>
+                        <p>
+                            共处理 {{ total_count }} 个文件，其中 {{ successful_count }} 个成功添加水印
+                            {% if encrypted_count > 0 %}
+                            ，{{ encrypted_count }} 个加密文件无法处理
+                            {% endif %}
+                        </p>
                     </div>
                     
                     <h5 class="mb-3">处理后的文件：</h5>
@@ -90,12 +95,18 @@
                     <div class="files-list mb-4">
                         {% for result in results %}
                         <div class="file-item">
+                            {% if result.encrypted %}
+                            <span class="text-danger">
+                                {{ result.original }} <span class="badge bg-danger">加密文件，无法处理</span>
+                            </span>
+                            {% else %}
                             <a href="{{ result.download_url }}" target="_blank" class="file-link">
                                 {{ result.processed }}
                             </a>
                             <a href="{{ result.download_url }}" class="btn btn-sm btn-primary" download="{{ result.processed }}">
                                 下载
                             </a>
+                            {% endif %}
                         </div>
                         {% endfor %}
                     </div>

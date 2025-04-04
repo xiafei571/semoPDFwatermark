@@ -2,6 +2,9 @@ import os
 import shutil
 import uuid
 import zipfile
+import tempfile
+import time
+import logging
 from typing import List, Optional
 from fastapi import FastAPI, File, Form, UploadFile, Request
 from fastapi.responses import FileResponse, HTMLResponse
@@ -9,11 +12,20 @@ from fastapi.templating import Jinja2Templates
 from fastapi.staticfiles import StaticFiles
 import uvicorn
 from urllib.parse import quote
+import json
 
 from semoPDFwatermark import PDFWatermarker
 
+# 配置日志
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    datefmt='%Y-%m-%d %H:%M:%S'
+)
+logger = logging.getLogger("pdf_watermark_app")
+
 # 应用版本号
-APP_VERSION = "1.1.1"
+APP_VERSION = "1.1.2"
 
 # 默认配置
 DEFAULT_CONFIG = {
@@ -57,8 +69,17 @@ async def add_watermark(
     color: str = Form("0,0,0"),
 ):
     """处理上传的PDF文件并添加水印"""
-    print(f"收到 {len(files)} 个文件")
+    logger.info("="*50)
+    logger.info(f"收到添加水印请求，共 {len(files)} 个文件")
+    for i, file in enumerate(files):
+        logger.info(f"文件 {i+1}: {file.filename}, 内容类型: {file.content_type}")
+    logger.info(f"水印文本: {watermark_text}")
+    logger.info(f"页面大小: {pagesize}, 字体: {fontname}, 大小: {fontsize}")
+    logger.info(f"不透明度: {opacity}, 角度: {angle}, 颜色: {color}")
+    logger.info("="*50)
+    
     if not files:
+        logger.warning("没有接收到文件")
         return templates.TemplateResponse(
             "index.html", 
             {"request": request, "error": "请选择至少一个PDF文件", "version": APP_VERSION}
@@ -70,6 +91,7 @@ async def add_watermark(
         if len(color_tuple) != 3:
             raise ValueError("颜色参数必须是3个由逗号分隔的数字")
     except ValueError as e:
+        logger.error(f"颜色格式错误: {str(e)}")
         return templates.TemplateResponse(
             "index.html", 
             {"request": request, "error": f"颜色格式错误: {str(e)}", "version": APP_VERSION}
@@ -79,6 +101,7 @@ async def add_watermark(
     session_id = str(uuid.uuid4())
     session_dir = os.path.join("results", session_id)
     os.makedirs(session_dir, exist_ok=True)
+    logger.info(f"创建会话目录: {session_dir}")
     
     # 保存上传的文件
     saved_files = []
@@ -88,33 +111,77 @@ async def add_watermark(
         watermarker = PDFWatermarker()
         watermarker.set_pagesize(pagesize)
         
+        # 预处理所有文件，读取内容并保存到临时文件
+        temp_files = []
         for i, file in enumerate(files):
             if not file.filename.lower().endswith('.pdf'):
-                print(f"跳过非PDF文件: {file.filename}")
+                logger.warning(f"跳过非PDF文件: {file.filename}")
                 continue
-            
-            # 先读取所有文件内容到内存
-            content = await file.read()
-            if not content:
-                print(f"文件内容为空: {file.filename}")
-                continue
-                
-            # 保存上传的文件
-            file_path = os.path.join("uploads", f"{session_id}_{i}_{file.filename}")
-            
-            # 保存到磁盘
-            with open(file_path, "wb") as f:
-                f.write(content)
-                
-            saved_files.append(file_path)
-            print(f"保存文件: {file_path}, 大小: {len(content)} 字节")
-            
-            # 添加水印
-            output_filename = f"watermarked_{file.filename}"
-            output_path = os.path.join(session_dir, output_filename)
             
             try:
-                watermarker.add_watermark(
+                # 读取文件内容
+                content = await file.read()
+                if not content:
+                    logger.warning(f"文件内容为空: {file.filename}")
+                    continue
+                
+                content_size = len(content)
+                logger.info(f"读取文件: {file.filename}, 大小: {content_size} 字节")
+                
+                # 生成临时文件名并保存 - 确保使用tempfile
+                temp_fd, file_path = tempfile.mkstemp(suffix='.pdf', prefix=f'upload_{i}_')
+                os.close(temp_fd)
+                
+                with open(file_path, "wb") as f:
+                    f.write(content)
+                
+                # 检查文件大小
+                actual_size = os.path.getsize(file_path)
+                if actual_size == 0:
+                    logger.error(f"临时文件为空: {file_path}")
+                    continue
+                
+                logger.info(f"保存到临时文件: {file_path}, 实际大小: {actual_size} 字节")
+                saved_files.append(file_path)
+                
+                # 将文件信息存储起来以供后续处理
+                temp_files.append({
+                    "file_path": file_path,
+                    "filename": file.filename,
+                    "size": content_size
+                })
+            except Exception as e:
+                logger.error(f"读取或保存文件时出错: {file.filename}, {str(e)}")
+                continue
+        
+        logger.info(f"预处理完成，有效PDF文件: {len(temp_files)} 个")
+        
+        # 处理所有已保存的文件
+        for i, file_info in enumerate(temp_files):
+            try:
+                file_path = file_info["file_path"]
+                original_filename = file_info["filename"]
+                
+                logger.info(f"开始处理文件 {i+1}/{len(temp_files)}: {original_filename}")
+                
+                # 验证临时文件是否有效
+                if not os.path.exists(file_path):
+                    logger.error(f"临时文件不存在: {file_path}")
+                    continue
+                
+                if os.path.getsize(file_path) == 0:
+                    logger.error(f"临时文件大小为0: {file_path}")
+                    continue
+                
+                # 设置输出文件
+                output_filename = f"watermarked_{original_filename}"
+                output_path = os.path.join(session_dir, output_filename)
+                
+                logger.info(f"添加水印: {file_path} -> {output_path}")
+                
+                # 添加水印
+                start_time = time.time()
+                success = watermarker.add_watermark(
                     file_path,
                     watermark_text,
                     output_path,
@@ -124,18 +191,35 @@ async def add_watermark(
                     angle=angle,
                     color=color_tuple
                 )
+                end_time = time.time()
                 
-                print(f"处理完成: {output_path}")
-                
-                result_files.append({
-                    "original": file.filename,
-                    "processed": output_filename,
-                    "download_url": f"/download/{session_id}/{output_filename}"
-                })
+                if success == "ENCRYPTED_PDF":
+                    logger.warning(f"文件加密无法处理: {original_filename}")
+                    result_files.append({
+                        "original": original_filename,
+                        "processed": None,
+                        "download_url": None,
+                        "encrypted": True
+                    })
+                elif success:
+                    output_size = os.path.getsize(output_path)
+                    logger.info(f"成功添加水印: {output_path}, 大小: {output_size} 字节, 耗时: {end_time - start_time:.2f}秒")
+                    
+                    result_files.append({
+                        "original": original_filename,
+                        "processed": output_filename,
+                        "download_url": f"/download/{session_id}/{output_filename}",
+                        "encrypted": False
+                    })
+                else:
+                    logger.error(f"添加水印失败: {original_filename}")
             except Exception as e:
-                print(f"处理文件 {file.filename} 时出错: {str(e)}")
+                logger.exception(f"处理文件 {file_info['filename']} 时出错")
+                continue
     
     except Exception as e:
+        logger.exception("处理文件时出错")
+        
         # 清理会话文件
         for file in saved_files:
             if os.path.exists(file):
@@ -144,28 +228,44 @@ async def add_watermark(
         if os.path.exists(session_dir):
             shutil.rmtree(session_dir)
             
-        print(f"处理出错: {str(e)}")
         return templates.TemplateResponse(
             "index.html", 
             {"request": request, "error": f"处理文件时出错: {str(e)}", "version": APP_VERSION}
         )
     
-    # 处理完成后删除上传的文件
-    for file in saved_files:
-        if os.path.exists(file):
-            os.remove(file)
+    finally:
+        # 处理完成后删除临时文件
+        for file in saved_files:
+            try:
+                if os.path.exists(file):
+                    os.remove(file)
+                    logger.info(f"删除临时文件: {file}")
+            except Exception as e:
+                logger.error(f"删除临时文件出错: {file}, {str(e)}")
     
-    print(f"成功处理 {len(result_files)} 个文件")
+    logger.info(f"处理结果: 成功 {len([r for r in result_files if not r.get('encrypted', False)])} / {len(temp_files)} 个文件 (排除加密文件)")
     
     # 如果没有成功处理任何文件，返回错误
-    if not result_files:
-        return templates.TemplateResponse(
-            "index.html", 
-            {"request": request, "error": "没有找到有效的PDF文件进行处理", "version": APP_VERSION}
-        )
+    if not any(not r.get('encrypted', False) for r in result_files):
+        if os.path.exists(session_dir):
+            shutil.rmtree(session_dir)
+            logger.info(f"删除会话目录: {session_dir}")
+            
+        # 检查是否所有文件都是加密的
+        if all(r.get('encrypted', False) for r in result_files) and result_files:
+            logger.warning("所有PDF文件都是加密的，无法处理")
+            return templates.TemplateResponse(
+                "index.html", 
+                {"request": request, "error": "所有PDF文件都是加密的，无法处理", "version": APP_VERSION}
+            )
+        else:
+            logger.warning("没有找到有效的PDF文件进行处理")
+            return templates.TemplateResponse(
+                "index.html", 
+                {"request": request, "error": "没有找到有效的PDF文件进行处理", "version": APP_VERSION}
+            )
     
     # 保存配置参数到配置文件
-    config_path = os.path.join(session_dir, "config.json")
     config = {
         "watermark_text": watermark_text,
         "pagesize": pagesize,
@@ -173,21 +273,34 @@ async def add_watermark(
         "fontsize": fontsize,
         "opacity": opacity,
         "angle": angle,
-        "color": color
+        "color": color,
+        "files": [r["original"] for r in result_files]
     }
     
-    with open(config_path, "w", encoding="utf-8") as f:
-        import json
-        json.dump(config, f, ensure_ascii=False)
+    # 保存配置到文件
+    with open(os.path.join(session_dir, "config.json"), "w", encoding="utf-8") as f:
+        json.dump(config, f, ensure_ascii=False, indent=2)
+    logger.info(f"保存配置到: {os.path.join(session_dir, 'config.json')}")
     
+    # 计算处理统计
+    encrypted_count = sum(1 for r in result_files if r.get('encrypted', False))
+    successful_count = sum(1 for r in result_files if not r.get('encrypted', False))
+    total_count = len(result_files)
+    
+    logger.info("="*50)
+    logger.info(f"处理完成，返回结果页面，成功处理 {successful_count}/{total_count} 个文件，其中加密文件: {encrypted_count}个")
+    logger.info("="*50)
+    
+    # 返回结果页面
     return templates.TemplateResponse(
-        "result.html", 
-        {
-            "request": request, 
+        "result.html", {
+            "request": request,
             "results": result_files,
             "session_id": session_id,
-            "config": config,  # 传递配置参数到结果页面
-            "version": APP_VERSION
+            "version": APP_VERSION,
+            "encrypted_count": encrypted_count,
+            "successful_count": successful_count,
+            "total_count": total_count
         }
     )
 
@@ -269,7 +382,6 @@ async def regenerate(request: Request, session_id: str):
     
     # 读取配置文件
     with open(config_path, "r", encoding="utf-8") as f:
-        import json
         config = json.load(f)
     
     # 返回带有预填参数的首页

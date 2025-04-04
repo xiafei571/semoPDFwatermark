@@ -190,7 +190,7 @@ class PDFWatermarker:
             color: RGB颜色元组 (r, g, b)，取值范围 0-1
             
         Returns:
-            str: 输出文件路径
+            str: 输出文件路径，如果文件加密则返回 "ENCRYPTED_PDF"
         """
         if not os.path.exists(input_pdf_path):
             raise FileNotFoundError(f"PDF文件 {input_pdf_path} 不存在")
@@ -200,25 +200,40 @@ class PDFWatermarker:
             file_name, file_ext = os.path.splitext(input_pdf_path)
             output_pdf_path = f"{file_name}_watermarked{file_ext}"
         
-        # 创建水印
-        watermark_buffer = self.create_watermark(
-            watermark_text, fontname, fontsize, opacity, angle, color
-        )
-        watermark_pdf = PdfReader(watermark_buffer)
-        watermark_page = watermark_pdf.pages[0]
-        
-        # 打开要添加水印的PDF
-        pdf_reader = PdfReader(input_pdf_path)
-        pdf_writer = PdfWriter()
-        
-        # 将水印添加到每一页
-        for page_num in range(len(pdf_reader.pages)):
-            page = pdf_reader.pages[page_num]
-            page.merge_page(watermark_page)
-            pdf_writer.add_page(page)
-        
-        # 保存输出文件
-        with open(output_pdf_path, "wb") as output_file:
-            pdf_writer.write(output_file)
-        
-        return output_pdf_path 
+        # 检查PDF是否加密
+        try:
+            # 打开要添加水印的PDF
+            pdf_reader = PdfReader(input_pdf_path)
+            
+            # 检查PDF是否加密
+            if pdf_reader.is_encrypted:
+                print(f"PDF文件 {input_pdf_path} 是加密的，无法处理")
+                return "ENCRYPTED_PDF"
+                
+            # 创建水印
+            watermark_buffer = self.create_watermark(
+                watermark_text, fontname, fontsize, opacity, angle, color
+            )
+            watermark_pdf = PdfReader(watermark_buffer)
+            watermark_page = watermark_pdf.pages[0]
+            
+            pdf_writer = PdfWriter()
+            
+            # 将水印添加到每一页
+            for page_num in range(len(pdf_reader.pages)):
+                page = pdf_reader.pages[page_num]
+                page.merge_page(watermark_page)
+                pdf_writer.add_page(page)
+            
+            # 保存输出文件
+            with open(output_pdf_path, "wb") as output_file:
+                pdf_writer.write(output_file)
+            
+            return output_pdf_path
+            
+        except Exception as e:
+            # 如果异常包含AES算法相关字符，则判断为加密PDF
+            if "PyCryptodome is required for AES algorithm" in str(e) or "decrypt" in str(e):
+                print(f"PDF文件 {input_pdf_path} 是加密的，无法处理: {e}")
+                return "ENCRYPTED_PDF"
+            raise e 
