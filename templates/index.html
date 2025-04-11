@@ -276,37 +276,32 @@
                 }
             }
             
-            // 监听所有控件的变化
-            watermarkText.addEventListener('input', updateWatermarkPreview);
-            fontsize.addEventListener('input', function() {
-                fontsizeValue.textContent = this.value;
+            // 监听水印文本变化
+            watermarkText.addEventListener('input', function() {
                 updateWatermarkPreview();
-            });
-            opacity.addEventListener('input', function() {
-                opacityValue.textContent = this.value;
-                updateWatermarkPreview();
-            });
-            angle.addEventListener('input', function() {
-                angleValue.textContent = this.value + '°';
-                updateWatermarkPreview();
-            });
-            fontname.addEventListener('change', updateWatermarkPreview);
-            colorInput.addEventListener('input', function() {
-                updateColorPreview();
-                updateWatermarkPreview();
+                updateSubmitButton();
             });
             
             // 设置滑块事件监听
             fontsize.addEventListener('input', function() {
                 fontsizeValue.textContent = this.value;
+                updateWatermarkPreview();
             });
             
             opacity.addEventListener('input', function() {
                 opacityValue.textContent = this.value;
+                updateWatermarkPreview();
             });
             
             angle.addEventListener('input', function() {
                 angleValue.textContent = this.value + '°';
+                updateWatermarkPreview();
+            });
+            
+            fontname.addEventListener('change', updateWatermarkPreview);
+            colorInput.addEventListener('input', function() {
+                updateColorPreview();
+                updateWatermarkPreview();
             });
             
             // 更新颜色预览
@@ -327,85 +322,103 @@
             // 监听颜色输入变化
             colorInput.addEventListener('input', updateColorPreview);
             
-            // 点击上传区域触发文件选择
-            dropzone.addEventListener('click', function() {
-                fileInput.click();
+            // 拖放处理
+            dropzone.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                dropzone.classList.add('dragover');
             });
             
-            // 处理拖放效果
-            ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
-                dropzone.addEventListener(eventName, function(e) {
-                    e.preventDefault();
-                    e.stopPropagation();
-                }, false);
+            dropzone.addEventListener('dragleave', (e) => {
+                e.preventDefault();
+                dropzone.classList.remove('dragover');
             });
             
-            ['dragenter', 'dragover'].forEach(eventName => {
-                dropzone.addEventListener(eventName, function() {
-                    dropzone.classList.add('dragover');
-                }, false);
-            });
-            
-            ['dragleave', 'drop'].forEach(eventName => {
-                dropzone.addEventListener(eventName, function() {
-                    dropzone.classList.remove('dragover');
-                }, false);
-            });
-            
-            // 处理文件拖放
-            dropzone.addEventListener('drop', function(e) {
-                const droppedFiles = e.dataTransfer.files;
-                updateFileList(droppedFiles);
-            });
-            
-            // 处理文件选择
-            fileInput.addEventListener('change', function() {
-                updateFileList(fileInput.files);
-            });
-            
-            // 更新文件列表显示
-            function updateFileList(selectedFiles) {
-                fileList.innerHTML = ''; // 清空列表
+            dropzone.addEventListener('drop', (e) => {
+                e.preventDefault();
+                dropzone.classList.remove('dragover');
                 
-                if (selectedFiles && selectedFiles.length > 0) {
-                    for (let i = 0; i < selectedFiles.length; i++) {
-                        const file = selectedFiles[i];
-                        
-                        // 只处理PDF文件
-                        if (file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf')) {
-                            const fileItem = document.createElement('div');
-                            fileItem.className = 'file-item';
-                            fileItem.innerHTML = `
-                                <span>${file.name} (${formatFileSize(file.size)})</span>
-                            `;
-                            fileList.appendChild(fileItem);
+                const files = e.dataTransfer.files;
+                if (files.length > 0) {
+                    // 添加新文件到现有文件列表
+                    const dataTransfer = new DataTransfer();
+                    const existingFiles = fileInput.files;
+                    
+                    // 添加现有文件
+                    for (let i = 0; i < existingFiles.length; i++) {
+                        dataTransfer.items.add(existingFiles[i]);
+                    }
+                    
+                    // 添加新文件
+                    for (const file of files) {
+                        if (file.type === 'application/pdf') {
+                            dataTransfer.items.add(file);
                         }
                     }
                     
-                    // 更新文件计数
-                    fileCount.textContent = selectedFiles.length;
-                } else {
-                    fileCount.textContent = '0';
+                    fileInput.files = dataTransfer.files;
+                    updateFileList();
+                    // 确保更新按钮状态
+                    updateSubmitButton();
+                }
+            });
+            
+            // 点击处理
+            dropzone.addEventListener('click', () => {
+                fileInput.click();
+            });
+            
+            // 文件选择处理
+            fileInput.addEventListener('change', () => {
+                updateFileList();
+                // 确保更新按钮状态
+                updateSubmitButton();
+            });
+            
+            // 更新文件列表显示
+            function updateFileList() {
+                fileList.innerHTML = '';
+                const files = fileInput.files;
+                fileCount.textContent = files.length;
+                
+                for (let i = 0; i < files.length; i++) {
+                    const file = files[i];
+                    const fileItem = document.createElement('div');
+                    fileItem.className = 'file-item';
+                    fileItem.innerHTML = `
+                        <span>${file.name}</span>
+                    `;
+                    fileList.appendChild(fileItem);
+                }
+            }
+            
+            // 更新提交按钮状态
+            function updateSubmitButton() {
+                const files = fileInput.files;
+                const watermarkTextValue = watermarkText.value;
+                submitBtn.disabled = files.length === 0 || !watermarkTextValue.trim();
+                console.log('Button state updated:', {
+                    filesCount: files.length,
+                    watermarkText: watermarkTextValue,
+                    disabled: submitBtn.disabled
+                });
+            }
+            
+            // 初始化时更新提交按钮状态
+            updateSubmitButton();
+            
+            // 提交表单前再次验证
+            document.getElementById('watermarkForm').addEventListener('submit', function(e) {
+                const files = fileInput.files;
+                const watermarkTextValue = watermarkText.value;
+                
+                if (files.length === 0 || !watermarkTextValue.trim()) {
+                    e.preventDefault();
+                    alert('请选择至少一个PDF文件并输入水印文本');
+                    return false;
                 }
                 
-                // 确保表单有效性
-                checkFormValidity();
-            }
-            
-            // 检查表单有效性
-            function checkFormValidity() {
-                // 禁用或启用提交按钮
-                submitBtn.disabled = fileInput.files.length === 0;
-            }
-            
-            // 格式化文件大小
-            function formatFileSize(bytes) {
-                if (bytes === 0) return '0 Bytes';
-                const k = 1024;
-                const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
-                const i = Math.floor(Math.log(bytes) / Math.log(k));
-                return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-            }
+                return true;
+            });
         });
     </script>
 </body>
