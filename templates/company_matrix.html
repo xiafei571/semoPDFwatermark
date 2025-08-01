@@ -1,0 +1,497 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Company Matrix Generator</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body {
+            background-color: #f8f9fa;
+        }
+        .main-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .card {
+            border-radius: 15px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        .form-control, .form-select {
+            border-radius: 10px;
+        }
+        .btn {
+            border-radius: 10px;
+        }
+        .company-input {
+            min-height: 200px;
+            font-family: monospace;
+        }
+        .example-companies {
+            background-color: #f8f9fa;
+            border-radius: 10px;
+            padding: 15px;
+            margin-top: 10px;
+        }
+        .example-companies code {
+            color: #e83e8c;
+        }
+    </style>
+</head>
+<body>
+    <!-- 导航栏 -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+        <div class="container">
+            <a class="navbar-brand" href="/">
+                <i class="fas fa-tools"></i> 工具集
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="/pdf-watermark">
+                            <i class="fas fa-file-pdf"></i> PDF水印
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link active" href="/company-matrix">
+                            <i class="fas fa-th"></i> 公司矩阵
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <div class="main-container">
+        <div class="row">
+            <!-- 左侧说明区域 (25%) -->
+            <div class="col-lg-3">
+                <div class="card">
+                    <div class="card-header bg-info text-white">
+                        <h5 class="mb-0"><i class="fas fa-lightbulb"></i> Instructions</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="example-companies">
+                            <h6>Example company names:</h6>
+                            <code>ByteDance<br>
+Shopee<br>
+Decathlon<br>
+Tesla<br>
+Apple<br>
+Microsoft<br>
+Google<br>
+Amazon<br>
+Meta</code>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 中间表单和预览区域 (50%) -->
+            <div class="col-lg-6">
+                <div class="card">
+                    <div class="card-header bg-primary text-white">
+                        <h3 class="card-title mb-0">
+                            <i class="fas fa-th"></i> Company Matrix Generator
+                        </h3>
+                    </div>
+                    <div class="card-body">
+                        <form method="post" action="/company-matrix/generate" id="matrixForm">
+                            <div class="mb-3">
+                                <label for="company_names" class="form-label">
+                                    <i class="fas fa-building"></i> Company Names List
+                                </label>
+                                <textarea 
+                                    class="form-control company-input" 
+                                    id="company_names" 
+                                    name="company_names" 
+                                    rows="10" 
+                                    placeholder="Enter company names, one per line&#10;Example:&#10;ByteDance&#10;Shopee&#10;Decathlon&#10;Tesla&#10;Apple&#10;Microsoft"
+                                    required></textarea>
+                                <div class="form-text">
+                                    <i class="fas fa-info-circle"></i> 
+                                    Enter one company name per line, the system will automatically generate corresponding logos and links
+                                </div>
+                            </div>
+                            
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="rows" class="form-label">
+                                            <i class="fas fa-arrows-alt-v"></i> Rows (M)
+                                        </label>
+                                        <select class="form-select" id="rows" name="rows" required>
+                                            <option value="">Select rows</option>
+                                            <option value="2">2 rows</option>
+                                            <option value="3" selected>3 rows</option>
+                                            <option value="4">4 rows</option>
+                                            <option value="5">5 rows</option>
+                                            <option value="6">6 rows</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="cols" class="form-label">
+                                            <i class="fas fa-arrows-alt-h"></i> Columns (N)
+                                        </label>
+                                        <select class="form-select" id="cols" name="cols" required>
+                                            <option value="">Select columns</option>
+                                            <option value="2">2 columns</option>
+                                            <option value="3" selected>3 columns</option>
+                                            <option value="4">4 columns</option>
+                                            <option value="5">5 columns</option>
+                                            <option value="6">6 columns</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="d-grid">
+                                <button type="submit" class="btn btn-primary btn-lg">
+                                    <i class="fas fa-magic"></i> Generate Matrix
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- Matrix Preview 区域 -->
+                <div class="card mt-3">
+                    <div class="card-header bg-success text-white">
+                        <h5 class="mb-0"><i class="fas fa-eye"></i> Matrix Preview</h5>
+                    </div>
+                    <div class="card-body">
+                        <div id="matrix-preview" class="text-center">
+                            <small class="text-muted">Enter company names and select matrix size to view preview</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 右侧功能特性区域 (25%) -->
+            <div class="col-lg-3">
+                <div class="card">
+                    <div class="card-header bg-warning text-dark">
+                        <h5 class="mb-0"><i class="fas fa-cog"></i> Features</h5>
+                    </div>
+                    <div class="card-body">
+                        <ul class="small">
+                            <li>Automatically fetch company logos from Clearbit</li>
+                            <li>Automatically generate company website links</li>
+                            <li>Support custom matrix size (M×N)</li>
+                            <li>Responsive design, adapts to various screens</li>
+                            <li>Generated matrix can be copied and used</li>
+                            <li>Real-time preview of matrix layout</li>
+                            <li>One-click HTML download</li>
+                            <li>Professional company logo integration</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 编辑模态框 -->
+    <div class="modal fade" id="editModal" tabindex="-1" aria-labelledby="editModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="editModalLabel">Edit Company Information</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="editForm">
+                        <div class="mb-3">
+                            <label for="editCompanyName" class="form-label">Company Name</label>
+                            <input type="text" class="form-control" id="editCompanyName" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="editLogoUrl" class="form-label">Logo URL</label>
+                            <input type="url" class="form-control" id="editLogoUrl" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="editWebsiteUrl" class="form-label">Website URL</label>
+                            <input type="url" class="form-control" id="editWebsiteUrl" required>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" onclick="saveEdit()">Save changes</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Matrix preview functionality
+        function updateMatrixPreview() {
+            const rows = parseInt(document.getElementById('rows').value) || 0;
+            const cols = parseInt(document.getElementById('cols').value) || 0;
+            const preview = document.getElementById('matrix-preview'); // Changed ID
+            
+            if (rows > 0 && cols > 0) {
+                let previewHtml = `<div class="d-inline-block">`;
+                for (let i = 0; i < rows; i++) {
+                    previewHtml += `<div class="d-flex">`;
+                    for (let j = 0; j < cols; j++) {
+                        previewHtml += `<div class="border m-1" style="width: 20px; height: 20px; background-color: #e9ecef;"></div>`;
+                    }
+                    previewHtml += `</div>`;
+                }
+                previewHtml += `</div>`;
+                preview.innerHTML = previewHtml;
+            } else {
+                preview.innerHTML = '<small class="text-muted">Enter company names and select matrix size to view preview</small>';
+            }
+        }
+        
+        // 处理表单提交
+        document.getElementById('matrixForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const formData = new FormData(this);
+            
+            fetch('/company-matrix/generate-json', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                // 保存矩阵数据到全局变量
+                currentMatrixData = data.matrix_data;
+                
+                // 显示矩阵结果
+                displayMatrixResult(data.matrix_data);
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Error generating matrix. Please try again.');
+            });
+        });
+        
+        // 显示矩阵结果
+        function displayMatrixResult(matrixData) {
+            const preview = document.getElementById('matrix-preview');
+            const rows = parseInt(document.getElementById('rows').value);
+            const cols = parseInt(document.getElementById('cols').value);
+            
+            let resultHtml = `
+                <div class="company-list" style="display: grid; grid-template-columns: repeat(${cols}, 1fr); gap: 10px; margin-bottom: 15px;">
+            `;
+            
+            matrixData.forEach((row, rowIndex) => {
+                row.forEach((company, colIndex) => {
+                    if (company) {
+                        resultHtml += `
+                            <div class="company" style="background: white; border-radius: 8px; padding: 10px; text-align: center; box-shadow: 0 2px 5px rgba(0,0,0,0.1); cursor: pointer;" 
+                                 onclick="openEditModal('${company.name}', '${company.logo_url}', '${company.website_url}', ${rowIndex}, ${colIndex})">
+                                <img src="${company.logo_url}" alt="${company.name}" style="width: 40px; height: 30px; object-fit: contain; margin-bottom: 5px; border-radius: 3px;" onerror="this.src='https://via.placeholder.com/40x30/f8f9fa/6c757d?text=?'">
+                                <div style="font-size: 10px; color: #2c3e50; word-wrap: break-word;">${company.name}</div>
+                            </div>
+                        `;
+                    } else {
+                        resultHtml += `
+                            <div class="company" style="background: transparent; border-radius: 8px; padding: 10px; text-align: center; border: 1px dashed #dee2e6; min-height: 60px;">
+                            </div>
+                        `;
+                    }
+                });
+            });
+            
+            resultHtml += `</div>`;
+            resultHtml += `
+                <div class="d-grid gap-2">
+                    <button class="btn btn-success btn-sm" onclick="downloadMatrixHTML()">
+                        <i class="fas fa-file-code"></i> Download HTML
+                    </button>
+                </div>
+            `;
+            
+            preview.innerHTML = resultHtml;
+        }
+        
+        // 全局变量存储当前编辑的数据
+        let currentMatrixData = [];
+        let currentEditingIndex = { row: -1, col: -1 };
+        
+        // 打开编辑模态框
+        function openEditModal(companyName, logoUrl, websiteUrl, rowIndex, colIndex) {
+            currentEditingIndex = { row: rowIndex, col: colIndex };
+            
+            // 填充表单数据
+            document.getElementById('editCompanyName').value = companyName;
+            document.getElementById('editLogoUrl').value = logoUrl;
+            document.getElementById('editWebsiteUrl').value = websiteUrl;
+            
+            // 显示模态框
+            const editModal = new bootstrap.Modal(document.getElementById('editModal'));
+            editModal.show();
+        }
+        
+        // 保存编辑
+        function saveEdit() {
+            const companyName = document.getElementById('editCompanyName').value;
+            const logoUrl = document.getElementById('editLogoUrl').value;
+            const websiteUrl = document.getElementById('editWebsiteUrl').value;
+            
+            if (currentEditingIndex.row >= 0 && currentEditingIndex.col >= 0) {
+                // 更新数据
+                currentMatrixData[currentEditingIndex.row][currentEditingIndex.col] = {
+                    name: companyName,
+                    logo_url: logoUrl,
+                    website_url: websiteUrl
+                };
+                
+                // 重新显示矩阵
+                displayMatrixResult(currentMatrixData);
+                
+                // 关闭模态框
+                const editModal = bootstrap.Modal.getInstance(document.getElementById('editModal'));
+                editModal.hide();
+                
+                // 显示成功提示
+                showToast('Company information updated successfully!', 'success');
+            }
+        }
+        
+        // 下载矩阵HTML
+        function downloadMatrixHTML() {
+            const cols = parseInt(document.getElementById('cols').value);
+            
+            let html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Company Matrix</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f8f9fa; margin: 0; padding: 20px; }
+        h1 { font-size: 1.8rem; color: #2c3e50; margin-bottom: 30px; text-align: center; }
+        .company-list { display: grid; grid-template-columns: repeat(${cols}, 1fr); gap: 20px; margin-bottom: 30px; }
+        .company { background: white; border-radius: 10px; padding: 20px; text-align: center; box-shadow: 0 2px 10px rgba(0,0,0,0.1); display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 150px; }
+        .company img { width: 80px; height: 60px; object-fit: contain; margin-bottom: 10px; border-radius: 5px; }
+        .company a { color: #2c3e50; text-decoration: none; font-weight: 500; font-size: 14px; word-wrap: break-word; max-width: 100%; }
+        .company a:hover { color: #3498db; }
+    </style>
+</head>
+<body>
+    <h1>Company Matrix</h1>
+    <div class="company-list">`;
+            
+            // 使用当前编辑后的矩阵数据
+            currentMatrixData.forEach(row => {
+                row.forEach(company => {
+                    if (company) {
+                        html += `
+        <div class="company">
+            <img src="${company.logo_url}" alt="${company.name}" onerror="this.src='https://via.placeholder.com/100x80/f8f9fa/6c757d?text=?'">
+            <a href="${company.website_url}" target="_blank">${company.name}</a>
+        </div>`;
+                    }
+                });
+            });
+            
+            html += `
+    </div>
+</body>
+</html>`;
+            
+            const blob = new Blob([html], { type: 'text/html' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'company_matrix.html';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            
+            // 显示成功提示
+            showToast('HTML file downloaded successfully!', 'success');
+        }
+        
+        // 显示提示消息
+        function showToast(message, type) {
+            const toast = document.createElement('div');
+            toast.className = `alert alert-${type} position-fixed`;
+            toast.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
+            toast.innerHTML = `
+                <i class="fas fa-${type === 'success' ? 'check' : 'info'}-circle"></i>
+                ${message}
+            `;
+            document.body.appendChild(toast);
+            
+            setTimeout(() => {
+                toast.remove();
+            }, 3000);
+        }
+        
+        // Initialize preview on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            updateMatrixPreview();
+            
+            // Check for saved data
+            const savedData = localStorage.getItem('companyMatrixData');
+            if (savedData) {
+                try {
+                    const data = JSON.parse(savedData);
+                    
+                    // Fill company names
+                    if (data.companies && data.companies.length > 0) {
+                        const companyNames = data.companies.map(company => company.name).join('\n');
+                        document.getElementById('company_names').value = companyNames;
+                    }
+                    
+                    // Fill rows and columns
+                    if (data.rows) {
+                        document.getElementById('rows').value = data.rows;
+                    }
+                    if (data.cols) {
+                        document.getElementById('cols').value = data.cols;
+                    }
+                    
+                    // Update preview
+                    updateMatrixPreview();
+                    
+                    // Show notification
+                    showRestoredDataMessage();
+                    
+                    // Clear localStorage data
+                    localStorage.removeItem('companyMatrixData');
+                } catch (e) {
+                    console.error('Error parsing saved data:', e);
+                }
+            }
+        });
+        
+        function showRestoredDataMessage() {
+            const message = document.createElement('div');
+            message.className = 'alert alert-info alert-dismissible fade show';
+            message.innerHTML = `
+                <i class="fas fa-info-circle"></i>
+                <strong>Data restored!</strong> Previously edited company list has been automatically filled in the form.
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            `;
+            
+            const form = document.querySelector('form');
+            form.insertBefore(message, form.firstChild);
+            
+            // Auto-dismiss after 5 seconds
+            setTimeout(() => {
+                if (message.parentNode) {
+                    message.remove();
+                }
+            }, 5000);
+        }
+    </script>
+</body>
+</html> 

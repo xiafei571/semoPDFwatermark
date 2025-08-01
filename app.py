@@ -15,6 +15,7 @@ from urllib.parse import quote
 import json
 
 from semoPDFwatermark import PDFWatermarker
+from company_matrix.company_matrix_routes import company_matrix_router
 
 # 配置日志
 logging.basicConfig(
@@ -40,6 +41,9 @@ DEFAULT_CONFIG = {
 # 创建应用
 app = FastAPI(title="PDF水印添加工具")
 
+# 包含company_matrix路由
+app.include_router(company_matrix_router, prefix="/company-matrix", tags=["company-matrix"])
+
 # 创建必要的目录
 os.makedirs("static", exist_ok=True)
 os.makedirs("uploads", exist_ok=True)
@@ -52,7 +56,13 @@ templates = Jinja2Templates(directory="templates")
 
 @app.get("/", response_class=HTMLResponse)
 async def home(request: Request):
-    """首页"""
+    """首页 - 工具集展示"""
+    return templates.TemplateResponse("home.html", {"request": request, "version": APP_VERSION})
+
+
+@app.get("/pdf-watermark", response_class=HTMLResponse)
+async def pdf_watermark_page(request: Request):
+    """PDF水印工具页面"""
     return templates.TemplateResponse("index.html", {"request": request, "version": APP_VERSION})
 
 
