@@ -23,8 +23,8 @@ RUN mkdir -p /app/static /app/uploads /app/results
 RUN pip install --no-cache-dir -r requirements_web.txt
 
 # 设置环境变量
-ENV PORT 8080
-ENV PYTHONUNBUFFERED 1
+ENV PORT=8080
+ENV PYTHONUNBUFFERED=1
 
 # 暴露端口
 EXPOSE 8080
