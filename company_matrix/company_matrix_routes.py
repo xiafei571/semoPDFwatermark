@@ -3,6 +3,9 @@ from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
 import os
 
+# 版本配置
+COMPANY_MATRIX_VERSION = "1.0.1"
+
 # 创建独立的路由
 company_matrix_router = APIRouter()
 
@@ -12,7 +15,7 @@ templates = Jinja2Templates(directory="templates")
 @company_matrix_router.get("/", response_class=HTMLResponse)
 async def company_matrix_page(request: Request):
     """公司矩阵生成页面"""
-    return templates.TemplateResponse("company_matrix.html", {"request": request})
+    return templates.TemplateResponse("company_matrix.html", {"request": request, "version": COMPANY_MATRIX_VERSION})
 
 @company_matrix_router.post("/generate", response_class=HTMLResponse)
 async def generate_company_matrix(
@@ -50,7 +53,8 @@ async def generate_company_matrix(
         "matrix_data": matrix_data,
         "rows": rows,
         "cols": cols,
-        "total_companies": len(companies)
+        "total_companies": len(companies),
+        "version": COMPANY_MATRIX_VERSION
     })
 
 @company_matrix_router.post("/generate-json")

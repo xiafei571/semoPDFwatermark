@@ -1,3 +1,9 @@
+#!/usr/bin/env python3
+"""
+PDF水印工具和公司矩阵生成器
+多功能Web应用 - 版本 1.1
+"""
+
 import os
 import shutil
 import uuid
@@ -5,28 +11,25 @@ import zipfile
 import tempfile
 import time
 import logging
-from typing import List, Optional
+import json
+from typing import List
+from urllib.parse import quote
+
 from fastapi import FastAPI, File, Form, UploadFile, Request
 from fastapi.responses import FileResponse, HTMLResponse
 from fastapi.templating import Jinja2Templates
 from fastapi.staticfiles import StaticFiles
-import uvicorn
-from urllib.parse import quote
-import json
 
 from semoPDFwatermark import PDFWatermarker
 from company_matrix.company_matrix_routes import company_matrix_router
 
-# 配置日志
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    datefmt='%Y-%m-%d %H:%M:%S'
-)
-logger = logging.getLogger("pdf_watermark_app")
+# ========== 应用配置 ==========
+APP_VERSION = "1.1"  # 总体应用版本
+APP_TITLE = "PDF水印添加工具"
 
-# 应用版本号
-APP_VERSION = "1.1.2"
+# 各模块版本
+PDF_WATERMARK_VERSION = "1.1.3"
+COMPANY_MATRIX_VERSION = "1.0.1"
 
 # 默认配置
 DEFAULT_CONFIG = {
@@ -38,32 +41,126 @@ DEFAULT_CONFIG = {
     "color": "0,0,0"
 }
 
-# 创建应用
-app = FastAPI(title="PDF水印添加工具")
+# ========== 日志配置 ==========
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    datefmt='%Y-%m-%d %H:%M:%S'
+)
+logger = logging.getLogger("pdf_watermark_app")
 
-# 包含company_matrix路由
-app.include_router(company_matrix_router, prefix="/company-matrix", tags=["company-matrix"])
+# ========== 应用初始化 ==========
+def create_app() -> FastAPI:
+    """创建并配置FastAPI应用"""
+    app = FastAPI(title=APP_TITLE, version=APP_VERSION)
+    
+    # 创建必要的目录
+    for directory in ["static", "uploads", "results"]:
+        os.makedirs(directory, exist_ok=True)
+    
+    # 设置静态文件和模板
+    app.mount("/static", StaticFiles(directory="static"), name="static")
+    
+    # 包含路由
+    app.include_router(company_matrix_router, prefix="/company-matrix", tags=["company-matrix"])
+    
+    return app
 
-# 创建必要的目录
-os.makedirs("static", exist_ok=True)
-os.makedirs("uploads", exist_ok=True)
-os.makedirs("results", exist_ok=True)
-
-# 设置静态文件和模板
-app.mount("/static", StaticFiles(directory="static"), name="static")
+# 创建应用实例
+app = create_app()
 templates = Jinja2Templates(directory="templates")
+
+# ========== 工具函数 ==========
+def _parse_color_parameter(color: str) -> tuple:
+    """解析颜色参数"""
+    try:
+        color_tuple = tuple(float(c) for c in color.split(','))
+        if len(color_tuple) != 3:
+            raise ValueError("颜色参数必须是3个由逗号分隔的数字")
+        return color_tuple
+    except ValueError:
+        return None
+
+def _create_session_directory() -> str:
+    """创建会话目录"""
+    session_id = str(uuid.uuid4())
+    session_dir = os.path.join("results", session_id)
+    os.makedirs(session_dir, exist_ok=True)
+    logger.info(f"创建会话目录: {session_dir}")
+    return session_id
+
+async def _save_uploaded_files(files: List[UploadFile]) -> List[dict]:
+    """保存上传的文件到临时目录"""
+    temp_files = []
+    for i, file in enumerate(files):
+        if not file.filename.lower().endswith('.pdf'):
+            logger.warning(f"跳过非PDF文件: {file.filename}")
+            continue
+        
+        try:
+            content = await file.read()
+            if not content:
+                logger.warning(f"文件内容为空: {file.filename}")
+                continue
+            
+            temp_fd, file_path = tempfile.mkstemp(suffix='.pdf', prefix=f'upload_{i}_')
+            os.close(temp_fd)
+            
+            with open(file_path, "wb") as f:
+                f.write(content)
+            
+            actual_size = os.path.getsize(file_path)
+            if actual_size == 0:
+                logger.error(f"临时文件为空: {file_path}")
+                continue
+            
+            logger.info(f"保存到临时文件: {file_path}, 大小: {actual_size} 字节")
+            temp_files.append({
+                "file_path": file_path,
+                "filename": file.filename,
+                "size": len(content)
+            })
+        except Exception as e:
+            logger.error(f"读取或保存文件时出错: {file.filename}, {str(e)}")
+            continue
+    
+    return temp_files
+
+def _cleanup_temp_files(temp_files: List[str]):
+    """清理临时文件"""
+    for file_path in temp_files:
+        try:
+            if os.path.exists(file_path):
+                os.remove(file_path)
+                logger.info(f"删除临时文件: {file_path}")
+        except Exception as e:
+            logger.error(f"删除临时文件出错: {file_path}, {str(e)}")
+
+def _save_session_config(session_dir: str, config: dict):
+    """保存会话配置到文件"""
+    config_path = os.path.join(session_dir, "config.json")
+    with open(config_path, "w", encoding="utf-8") as f:
+        json.dump(config, f, ensure_ascii=False, indent=2)
+    logger.info(f"保存配置到: {config_path}")
+
+# ========== 路由处理器 ==========
 
 
 @app.get("/", response_class=HTMLResponse)
 async def home(request: Request):
     """首页 - 工具集展示"""
-    return templates.TemplateResponse("home.html", {"request": request, "version": APP_VERSION})
+    return templates.TemplateResponse("home.html", {
+        "request": request, 
+        "version": APP_VERSION,
+        "pdf_version": PDF_WATERMARK_VERSION,
+        "company_version": COMPANY_MATRIX_VERSION
+    })
 
 
 @app.get("/pdf-watermark", response_class=HTMLResponse)
 async def pdf_watermark_page(request: Request):
     """PDF水印工具页面"""
-    return templates.TemplateResponse("index.html", {"request": request, "version": APP_VERSION})
+    return templates.TemplateResponse("index.html", {"request": request, "version": PDF_WATERMARK_VERSION})
 
 
 @app.post("/add-watermark")
@@ -92,79 +189,35 @@ async def add_watermark(
         logger.warning("没有接收到文件")
         return templates.TemplateResponse(
             "index.html", 
-            {"request": request, "error": "请选择至少一个PDF文件", "version": APP_VERSION}
+            {"request": request, "error": "请选择至少一个PDF文件", "version": PDF_WATERMARK_VERSION}
         )
     
-    # 处理颜色参数
-    try:
-        color_tuple = tuple(float(c) for c in color.split(','))
-        if len(color_tuple) != 3:
-            raise ValueError("颜色参数必须是3个由逗号分隔的数字")
-    except ValueError as e:
-        logger.error(f"颜色格式错误: {str(e)}")
+    # 验证和解析颜色参数
+    color_tuple = _parse_color_parameter(color)
+    if color_tuple is None:
+        logger.error(f"颜色格式错误: {color}")
         return templates.TemplateResponse(
             "index.html", 
-            {"request": request, "error": f"颜色格式错误: {str(e)}", "version": APP_VERSION}
+            {"request": request, "error": f"颜色格式错误: {color}", "version": PDF_WATERMARK_VERSION}
         )
     
-    # 创建一个会话ID用于保存文件
-    session_id = str(uuid.uuid4())
+    # 创建会话目录
+    session_id = _create_session_directory()
     session_dir = os.path.join("results", session_id)
-    os.makedirs(session_dir, exist_ok=True)
-    logger.info(f"创建会话目录: {session_dir}")
     
     # 保存上传的文件
-    saved_files = []
     result_files = []
     
     try:
-        watermarker = PDFWatermarker()
-        watermarker.set_pagesize(pagesize)
-        
-        # 预处理所有文件，读取内容并保存到临时文件
-        temp_files = []
-        for i, file in enumerate(files):
-            if not file.filename.lower().endswith('.pdf'):
-                logger.warning(f"跳过非PDF文件: {file.filename}")
-                continue
-            
-            try:
-                # 读取文件内容
-                content = await file.read()
-                if not content:
-                    logger.warning(f"文件内容为空: {file.filename}")
-                    continue
-                
-                content_size = len(content)
-                logger.info(f"读取文件: {file.filename}, 大小: {content_size} 字节")
-                
-                # 生成临时文件名并保存 - 确保使用tempfile
-                temp_fd, file_path = tempfile.mkstemp(suffix='.pdf', prefix=f'upload_{i}_')
-                os.close(temp_fd)
-                
-                with open(file_path, "wb") as f:
-                    f.write(content)
-                
-                # 检查文件大小
-                actual_size = os.path.getsize(file_path)
-                if actual_size == 0:
-                    logger.error(f"临时文件为空: {file_path}")
-                    continue
-                
-                logger.info(f"保存到临时文件: {file_path}, 实际大小: {actual_size} 字节")
-                saved_files.append(file_path)
-                
-                # 将文件信息存储起来以供后续处理
-                temp_files.append({
-                    "file_path": file_path,
-                    "filename": file.filename,
-                    "size": content_size
-                })
-            except Exception as e:
-                logger.error(f"读取或保存文件时出错: {file.filename}, {str(e)}")
-                continue
+        # 预处理所有文件
+        temp_files = await _save_uploaded_files(files)
+        saved_files = [f["file_path"] for f in temp_files]
         
         logger.info(f"预处理完成，有效PDF文件: {len(temp_files)} 个")
+        
+        # 初始化水印器
+        watermarker = PDFWatermarker()
+        watermarker.set_pagesize(pagesize)
         
         # 处理所有已保存的文件
         for i, file_info in enumerate(temp_files):
@@ -240,18 +293,12 @@ async def add_watermark(
             
         return templates.TemplateResponse(
             "index.html", 
-            {"request": request, "error": f"处理文件时出错: {str(e)}", "version": APP_VERSION}
+            {"request": request, "error": f"处理文件时出错: {str(e)}", "version": PDF_WATERMARK_VERSION}
         )
     
     finally:
         # 处理完成后删除临时文件
-        for file in saved_files:
-            try:
-                if os.path.exists(file):
-                    os.remove(file)
-                    logger.info(f"删除临时文件: {file}")
-            except Exception as e:
-                logger.error(f"删除临时文件出错: {file}, {str(e)}")
+        _cleanup_temp_files(saved_files)
     
     logger.info(f"处理结果: 成功 {len([r for r in result_files if not r.get('encrypted', False)])} / {len(temp_files)} 个文件 (排除加密文件)")
     
@@ -266,13 +313,13 @@ async def add_watermark(
             logger.warning("所有PDF文件都是加密的，无法处理")
             return templates.TemplateResponse(
                 "index.html", 
-                {"request": request, "error": "所有PDF文件都是加密的，无法处理", "version": APP_VERSION}
+                {"request": request, "error": "所有PDF文件都是加密的，无法处理", "version": PDF_WATERMARK_VERSION}
             )
         else:
             logger.warning("没有找到有效的PDF文件进行处理")
             return templates.TemplateResponse(
                 "index.html", 
-                {"request": request, "error": "没有找到有效的PDF文件进行处理", "version": APP_VERSION}
+                {"request": request, "error": "没有找到有效的PDF文件进行处理", "version": PDF_WATERMARK_VERSION}
             )
     
     # 保存配置参数到配置文件
@@ -286,11 +333,7 @@ async def add_watermark(
         "color": color,
         "files": [r["original"] for r in result_files]
     }
-    
-    # 保存配置到文件
-    with open(os.path.join(session_dir, "config.json"), "w", encoding="utf-8") as f:
-        json.dump(config, f, ensure_ascii=False, indent=2)
-    logger.info(f"保存配置到: {os.path.join(session_dir, 'config.json')}")
+    _save_session_config(session_dir, config)
     
     # 计算处理统计
     encrypted_count = sum(1 for r in result_files if r.get('encrypted', False))
@@ -307,7 +350,7 @@ async def add_watermark(
             "request": request,
             "results": result_files,
             "session_id": session_id,
-            "version": APP_VERSION,
+            "version": PDF_WATERMARK_VERSION,
             "encrypted_count": encrypted_count,
             "successful_count": successful_count,
             "total_count": total_count
@@ -387,7 +430,7 @@ async def regenerate(request: Request, session_id: str):
     if not os.path.exists(config_path):
         return templates.TemplateResponse(
             "index.html", 
-            {"request": request, "error": "配置信息不存在，无法重新生成", "version": APP_VERSION}
+            {"request": request, "error": "配置信息不存在，无法重新生成", "version": PDF_WATERMARK_VERSION}
         )
     
     # 读取配置文件
@@ -400,7 +443,7 @@ async def regenerate(request: Request, session_id: str):
         {
             "request": request,
             "config": config,  # 传递配置参数
-            "version": APP_VERSION
+            "version": PDF_WATERMARK_VERSION
         }
     )
 
