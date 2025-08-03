@@ -149,6 +149,7 @@ def _save_session_config(session_dir: str, config: dict):
 @app.get("/", response_class=HTMLResponse)
 async def home(request: Request):
     """首页 - 工具集展示"""
+    logger.info(f"Home page - PDF version: {PDF_WATERMARK_VERSION}, Company version: {COMPANY_MATRIX_VERSION}")
     return templates.TemplateResponse("home.html", {
         "request": request, 
         "version": APP_VERSION,

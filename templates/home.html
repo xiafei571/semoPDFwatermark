@@ -209,7 +209,7 @@
             <!-- PDF水印工具 -->
             <div class="col-lg-6">
                 <div class="app-card">
-                    <div class="version-badge">v{{ pdf_version }}</div>
+                    <div class="version-badge">v{{ pdf_version or "1.1.3" }}</div>
                     <div class="app-icon pdf-watermark">
                         <i class="fas fa-file-pdf"></i>
                     </div>
@@ -234,7 +234,7 @@
             <!-- 公司矩阵工具 -->
             <div class="col-lg-6">
                 <div class="app-card">
-                    <div class="version-badge">v{{ company_version }}</div>
+                    <div class="version-badge">v{{ company_version or "1.0.1" }}</div>
                     <div class="app-icon company-matrix">
                         <i class="fas fa-th"></i>
                     </div>
