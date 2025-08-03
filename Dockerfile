@@ -7,12 +7,14 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     fonts-wqy-zenhei \
     fonts-wqy-microhei \
     fonts-noto-cjk \
+    curl \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
 # 复制项目文件
 COPY semoPDFwatermark/ /app/semoPDFwatermark/
 COPY templates/ /app/templates/
+COPY company_matrix/ /app/company_matrix/
 COPY app.py /app/
 COPY main.py /app/
 COPY requirements_web.txt /app/
@@ -29,6 +31,10 @@ ENV PYTHONUNBUFFERED=1
 
 # 暴露端口
 EXPOSE 8080
+
+# 添加健康检查
+HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
+  CMD curl -f http://localhost:8080/health || exit 1
 
 # 设置入口点
 CMD ["python", "main.py"] 

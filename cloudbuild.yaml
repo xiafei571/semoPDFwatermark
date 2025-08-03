@@ -22,11 +22,15 @@ steps:
       - 'managed'
       - '--allow-unauthenticated'
       - '--memory'
-      - '512Mi'
+      - '1Gi'
       - '--timeout'
-      - '300'
+      - '900'
       - '--port'
       - '8080'
+      - '--max-instances'
+      - '10'
+      - '--cpu'
+      - '1'
 
 substitutions:
   _SERVICE_NAME: soranest-tools

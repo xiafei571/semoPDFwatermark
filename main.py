@@ -16,8 +16,9 @@ if __name__ == "__main__":
     
     # 启动服务器，监听所有网络接口
     uvicorn.run(
-        app, 
+        "app:app", 
         host="0.0.0.0", 
         port=port,
-        log_level="info"
+        log_level="info",
+        access_log=True
     ) 
