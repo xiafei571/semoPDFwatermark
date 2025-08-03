@@ -412,7 +412,9 @@ async def health_check():
     return {"status": "healthy"}
 
 
+# 只有在直接运行此文件时才启动服务器
 if __name__ == "__main__":
+    import uvicorn
     # 获取PORT环境变量，如果不存在则默认为8000
     port = int(os.environ.get("PORT", 8000))
     

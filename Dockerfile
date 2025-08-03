@@ -14,6 +14,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 COPY semoPDFwatermark/ /app/semoPDFwatermark/
 COPY templates/ /app/templates/
 COPY app.py /app/
+COPY main.py /app/
 COPY requirements_web.txt /app/
 
 # 创建必要的目录
@@ -30,4 +31,4 @@ ENV PYTHONUNBUFFERED=1
 EXPOSE 8080
 
 # 设置入口点
-ENTRYPOINT ["python", "app.py"] 
+CMD ["python", "main.py"] 
