@@ -1,0 +1,8 @@
+User-agent: *
+Allow: /
+
+# Sitemap
+Sitemap: https://soranest-tools-849883756716.asia-northeast1.run.app/sitemap.xml
+
+# Crawl-delay
+Crawl-delay: 1 
