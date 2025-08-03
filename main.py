@@ -28,9 +28,16 @@ def main():
     
     # 生产环境优化
     if environment == "production":
+        # 检查是否有uvloop可用
+        try:
+            import uvloop
+            loop_type = "uvloop" if os.name != "nt" else "asyncio"
+        except ImportError:
+            loop_type = "asyncio"
+        
         uvicorn_config.update({
             "workers": 1,
-            "loop": "uvloop" if os.name != "nt" else "asyncio"
+            "loop": loop_type
         })
     
     # 启动服务器
