@@ -167,7 +167,7 @@
                                              data-link-text="{{ company.name }}">
                                             <img src="{{ company.logo_url }}" 
                                                  alt="{{ company.name }}"
-                                                 onerror="this.src='https://via.placeholder.com/100x80/f8f9fa/6c757d?text=?'">
+                                                 onerror="this.onerror=null; this.src='https://via.placeholder.com/100x80/f8f9fa/6c757d?text=?'">
                                             <a href="{{ company.website_url }}" target="_blank">
                                                 {{ company.name }}
                                             </a>
@@ -423,7 +423,7 @@
                 
                 html += `
         <div class="company">
-            <img src="${imgSrc}" alt="${imgAlt}" onerror="this.src='https://via.placeholder.com/100x80/f8f9fa/6c757d?text=?'">
+            <img src="${imgSrc}" alt="${imgAlt}" onerror="this.onerror=null; this.src='https://via.placeholder.com/100x80/f8f9fa/6c757d?text=?'">
             <a href="${linkHref}" target="_blank">${linkText}</a>
         </div>`;
             });
