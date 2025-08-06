@@ -61,6 +61,46 @@
         .example-companies code {
             color: #e83e8c;
         }
+        
+        /* 自动完成样式 */
+        .autocomplete-item {
+            padding: 8px 12px;
+            cursor: pointer;
+            border-bottom: 1px solid #f8f9fa;
+            display: flex;
+            align-items: center;
+        }
+        
+        .autocomplete-item:hover {
+            background-color: #f8f9fa;
+        }
+        
+        .autocomplete-item img {
+            width: 20px;
+            height: 15px;
+            object-fit: contain;
+            margin-right: 8px;
+            border-radius: 2px;
+        }
+        
+        .autocomplete-item .company-name {
+            font-weight: 500;
+        }
+        
+        .autocomplete-item .company-domain {
+            font-size: 12px;
+            color: #6c757d;
+            margin-left: auto;
+        }
+        
+        #autocomplete_dropdown {
+            position: absolute;
+            z-index: 1000;
+            background: white;
+            border: 1px solid #dee2e6;
+            border-radius: 0.375rem;
+            box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+        }
     </style>
 </head>
 <body>
@@ -129,6 +169,23 @@ Meta</code>
                                 <label for="company_names" class="form-label">
                                     <i class="fas fa-building"></i> Company Names List
                                 </label>
+                                
+                                <!-- 自动完成输入框 -->
+                                <div class="mb-2">
+                                    <div class="input-group">
+                                        <input type="text" 
+                                               class="form-control" 
+                                               id="autocomplete_input" 
+                                               placeholder="Type to search companies (e.g., 'Google', 'Amazon')"
+                                               autocomplete="off">
+                                        <button class="btn btn-outline-secondary" type="button" id="add_company_btn">
+                                            <i class="fas fa-plus"></i> Add
+                                        </button>
+                                    </div>
+                                    <div id="autocomplete_dropdown" class="dropdown-menu w-100" style="display: none; max-height: 200px; overflow-y: auto;">
+                                    </div>
+                                </div>
+                                
                                 <textarea 
                                     class="form-control company-input" 
                                     id="company_names" 
@@ -457,6 +514,159 @@ Meta</code>
                 toast.remove();
             }, 3000);
         }
+        
+        // 自动完成功能
+        let autocompleteTimeout;
+        let selectedSuggestionIndex = -1;
+        
+        // 自动完成输入框事件
+        document.getElementById('autocomplete_input').addEventListener('input', function(e) {
+            const query = e.target.value.trim();
+            
+            // 清除之前的定时器
+            clearTimeout(autocompleteTimeout);
+            
+            if (query.length < 2) {
+                hideAutocompleteDropdown();
+                return;
+            }
+            
+            // 延迟搜索，避免频繁请求
+            autocompleteTimeout = setTimeout(() => {
+                searchCompanies(query);
+            }, 300);
+        });
+        
+        // 键盘导航
+        document.getElementById('autocomplete_input').addEventListener('keydown', function(e) {
+            const dropdown = document.getElementById('autocomplete_dropdown');
+            const items = dropdown.querySelectorAll('.autocomplete-item');
+            
+            if (e.key === 'ArrowDown') {
+                e.preventDefault();
+                selectedSuggestionIndex = Math.min(selectedSuggestionIndex + 1, items.length - 1);
+                updateSelectedItem(items);
+            } else if (e.key === 'ArrowUp') {
+                e.preventDefault();
+                selectedSuggestionIndex = Math.max(selectedSuggestionIndex - 1, -1);
+                updateSelectedItem(items);
+            } else if (e.key === 'Enter') {
+                e.preventDefault();
+                if (selectedSuggestionIndex >= 0 && items[selectedSuggestionIndex]) {
+                    selectCompany(items[selectedSuggestionIndex]);
+                } else {
+                    addCurrentCompany();
+                }
+            } else if (e.key === 'Escape') {
+                hideAutocompleteDropdown();
+            }
+        });
+        
+        // 点击添加按钮
+        document.getElementById('add_company_btn').addEventListener('click', function() {
+            addCurrentCompany();
+        });
+        
+        // 搜索公司
+        function searchCompanies(query) {
+            fetch(`/company-matrix/autocomplete?query=${encodeURIComponent(query)}`)
+                .then(response => response.json())
+                .then(data => {
+                    showAutocompleteSuggestions(data.suggestions);
+                })
+                .catch(error => {
+                    console.error('Error searching companies:', error);
+                });
+        }
+        
+        // 显示自动完成建议
+        function showAutocompleteSuggestions(suggestions) {
+            const dropdown = document.getElementById('autocomplete_dropdown');
+            
+            if (suggestions.length === 0) {
+                hideAutocompleteDropdown();
+                return;
+            }
+            
+            let html = '';
+            suggestions.forEach((company, index) => {
+                html += `
+                    <div class="autocomplete-item" data-company='${JSON.stringify(company)}'>
+                        <img src="https://logo.clearbit.com/${company.domain}" alt="${company.name}" onerror="this.src='https://via.placeholder.com/20x15/f8f9fa/6c757d?text=?'">
+                        <span class="company-name">${company.name}</span>
+                        <span class="company-domain">${company.domain}</span>
+                    </div>
+                `;
+            });
+            
+            dropdown.innerHTML = html;
+            dropdown.style.display = 'block';
+            
+            // 添加点击事件
+            dropdown.querySelectorAll('.autocomplete-item').forEach(item => {
+                item.addEventListener('click', function() {
+                    selectCompany(this);
+                });
+            });
+            
+            selectedSuggestionIndex = -1;
+        }
+        
+        // 更新选中项
+        function updateSelectedItem(items) {
+            items.forEach((item, index) => {
+                if (index === selectedSuggestionIndex) {
+                    item.style.backgroundColor = '#e9ecef';
+                } else {
+                    item.style.backgroundColor = '';
+                }
+            });
+        }
+        
+        // 选择公司
+        function selectCompany(item) {
+            const company = JSON.parse(item.dataset.company);
+            addCompanyToList(company.name);
+            hideAutocompleteDropdown();
+            document.getElementById('autocomplete_input').value = '';
+        }
+        
+        // 添加当前输入的公司
+        function addCurrentCompany() {
+            const input = document.getElementById('autocomplete_input');
+            const companyName = input.value.trim();
+            
+            if (companyName) {
+                addCompanyToList(companyName);
+                input.value = '';
+                hideAutocompleteDropdown();
+            }
+        }
+        
+        // 添加公司到列表
+        function addCompanyToList(companyName) {
+            const textarea = document.getElementById('company_names');
+            const currentValue = textarea.value.trim();
+            
+            if (currentValue) {
+                textarea.value = currentValue + '\n' + companyName;
+            } else {
+                textarea.value = companyName;
+            }
+        }
+        
+        // 隐藏自动完成下拉框
+        function hideAutocompleteDropdown() {
+            document.getElementById('autocomplete_dropdown').style.display = 'none';
+            selectedSuggestionIndex = -1;
+        }
+        
+        // 点击其他地方隐藏下拉框
+        document.addEventListener('click', function(e) {
+            if (!e.target.closest('#autocomplete_input') && !e.target.closest('#autocomplete_dropdown')) {
+                hideAutocompleteDropdown();
+            }
+        });
         
         // Initialize preview on page load
         document.addEventListener('DOMContentLoaded', function() {

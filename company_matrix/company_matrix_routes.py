@@ -2,6 +2,7 @@ from fastapi import APIRouter, Request, Form
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
 import os
+from .company_data import get_company_suggestions, get_company_by_name
 
 # 版本配置
 COMPANY_MATRIX_VERSION = "1.0.1"
@@ -36,14 +37,24 @@ async def generate_company_matrix(
             index = i * cols + j
             if index < len(companies):
                 company_name = companies[index]
-                # 生成域名（简单处理，实际可能需要更复杂的逻辑）
-                domain = company_name.lower().replace(' ', '').replace('.', '') + '.com'
-                row.append({
-                    'name': company_name,
-                    'domain': domain,
-                    'logo_url': f"https://logo.clearbit.com/{domain}",
-                    'website_url': f"https://www.{domain}"
-                })
+                # 尝试从预定义数据中获取公司信息
+                company_info = get_company_by_name(company_name)
+                if company_info:
+                    row.append({
+                        'name': company_info['name'],
+                        'domain': company_info['domain'],
+                        'logo_url': f"https://logo.clearbit.com/{company_info['domain']}",
+                        'website_url': company_info['website']
+                    })
+                else:
+                    # 如果不在预定义列表中，使用默认逻辑
+                    domain = company_name.lower().replace(' ', '').replace('.', '') + '.com'
+                    row.append({
+                        'name': company_name,
+                        'domain': domain,
+                        'logo_url': f"https://logo.clearbit.com/{domain}",
+                        'website_url': f"https://www.{domain}"
+                    })
             else:
                 row.append(None)
         matrix_data.append(row)
@@ -75,14 +86,24 @@ async def generate_company_matrix_json(
             index = i * cols + j
             if index < len(companies):
                 company_name = companies[index]
-                # 生成域名（简单处理，实际可能需要更复杂的逻辑）
-                domain = company_name.lower().replace(' ', '').replace('.', '') + '.com'
-                row.append({
-                    'name': company_name,
-                    'domain': domain,
-                    'logo_url': f"https://logo.clearbit.com/{domain}",
-                    'website_url': f"https://www.{domain}"
-                })
+                # 尝试从预定义数据中获取公司信息
+                company_info = get_company_by_name(company_name)
+                if company_info:
+                    row.append({
+                        'name': company_info['name'],
+                        'domain': company_info['domain'],
+                        'logo_url': f"https://logo.clearbit.com/{company_info['domain']}",
+                        'website_url': company_info['website']
+                    })
+                else:
+                    # 如果不在预定义列表中，使用默认逻辑
+                    domain = company_name.lower().replace(' ', '').replace('.', '') + '.com'
+                    row.append({
+                        'name': company_name,
+                        'domain': domain,
+                        'logo_url': f"https://logo.clearbit.com/{domain}",
+                        'website_url': f"https://www.{domain}"
+                    })
             else:
                 row.append(None)
         matrix_data.append(row)
@@ -92,4 +113,12 @@ async def generate_company_matrix_json(
         "rows": rows,
         "cols": cols,
         "total_companies": len(companies)
+    })
+
+@company_matrix_router.get("/autocomplete")
+async def get_company_suggestions_api(query: str):
+    """获取公司名称自动完成建议"""
+    suggestions = get_company_suggestions(query)
+    return JSONResponse({
+        "suggestions": suggestions
     }) 
