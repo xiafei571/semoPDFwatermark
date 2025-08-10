@@ -32,6 +32,7 @@ RUN pip install --no-cache-dir -r requirements_web.txt
 # 设置环境变量
 ENV PORT=8080
 ENV PYTHONUNBUFFERED=1
+ENV PYTHONPATH=/app:${PYTHONPATH}
 
 # 暴露端口
 EXPOSE 8080

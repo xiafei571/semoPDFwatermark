@@ -5,6 +5,7 @@ PDF水印工具和公司矩阵生成器
 """
 
 import os
+import sys
 import shutil
 import uuid
 import zipfile
@@ -12,6 +13,9 @@ import tempfile
 import time
 import logging
 import json
+
+# 确保 /app 在 Python 路径中（Cloud Run 工作目录）
+sys.path.insert(0, os.path.abspath(os.environ.get("PYTHONPATH_INSERT", "/app")))
 
 # 解决macOS上的OpenMP库冲突和numpy兼容性问题
 os.environ['KMP_DUPLICATE_LIB_OK'] = 'TRUE'
