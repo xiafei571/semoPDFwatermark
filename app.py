@@ -164,6 +164,12 @@ async def pdf_watermark_page(request: Request):
     return templates.TemplateResponse("index.html", {"request": request, "version": PDF_WATERMARK_VERSION})
 
 
+@app.get("/cab", response_class=HTMLResponse)
+async def cab_page(request: Request):
+    """CAB应用页面"""
+    return templates.TemplateResponse("cab.html", {"request": request})
+
+
 @app.post("/add-watermark")
 async def add_watermark(
     request: Request,
