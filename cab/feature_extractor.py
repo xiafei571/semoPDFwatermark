@@ -15,16 +15,22 @@ import logging
 logger = logging.getLogger(__name__)
 
 class ImageFeatureExtractor:
-    def __init__(self, model_name: str = "ViT-B-32", pretrained: str = "openai"):
+    def __init__(self, model_name: str = None, pretrained: str = None, checkpoint_path: Optional[str] = None):
         """
         初始化图像特征提取器
         
         Args:
-            model_name: OpenCLIP模型名称
-            pretrained: 预训练权重版本
+            model_name: OpenCLIP模型名称（默认从环境变量 CAB_MODEL_NAME 或 "ViT-B-32"）
+            pretrained: 预训练权重版本（默认从环境变量 CAB_PRETRAINED 或 "openai"）
+            checkpoint_path: 本地自定义权重路径（默认从环境变量 CAB_CHECKPOINT_PATH 或 "cab/model.pt"）
         """
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         logger.info(f"Using device: {self.device}")
+        
+        # 环境变量优先
+        model_name = model_name or os.environ.get("CAB_MODEL_NAME", "ViT-B-32")
+        pretrained = pretrained or os.environ.get("CAB_PRETRAINED", "openai")
+        checkpoint_path = checkpoint_path or os.environ.get("CAB_CHECKPOINT_PATH", "cab/model.pt")
         
         try:
             self.model, _, self.preprocess = open_clip.create_model_and_transforms(
@@ -32,6 +38,16 @@ class ImageFeatureExtractor:
             )
             self.model.eval()
             logger.info(f"Loaded OpenCLIP model: {model_name} ({pretrained})")
+            
+            # 可选加载本地自定义权重
+            if checkpoint_path and os.path.exists(checkpoint_path):
+                try:
+                    ckpt = torch.load(checkpoint_path, map_location=self.device)
+                    state = ckpt.get("state_dict", ckpt)
+                    missing, unexpected = self.model.load_state_dict(state, strict=False)
+                    logger.info(f"Loaded custom checkpoint: {checkpoint_path} (missing={len(missing)}, unexpected={len(unexpected)})")
+                except Exception as ce:
+                    logger.warning(f"Failed to load custom checkpoint {checkpoint_path}: {ce}")
         except Exception as e:
             logger.error(f"Failed to load OpenCLIP model: {e}")
             raise

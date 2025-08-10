@@ -10,9 +10,55 @@ import pandas as pd
 import faiss
 from typing import List, Tuple, Dict, Optional
 import logging
+import glob
+import unicodedata
+
 from .feature_extractor import ImageFeatureExtractor
 
 logger = logging.getLogger(__name__)
+
+# 新增: 规范化与路径解析工具
+def _sanitize_filename(raw_name: str) -> str:
+    """对CSV中的文件名进行鲁棒清洗，去除空白与常见标点，并标准化Unicode。"""
+    name = str(raw_name)
+    # Unicode 归一化（处理全角标点等）
+    name = unicodedata.normalize('NFKC', name)
+    # 去除首尾空白
+    name = name.strip()
+    # 去除首尾引号
+    name = name.strip('"\'')
+    # 去除末尾常见分隔标点（中英文逗号、句号、分号）与空白
+    while len(name) > 0 and name[-1] in ['，', '。', '；', ',', ';', ' ']:
+        name = name[:-1]
+    # 仅保留文件名（去掉可能拼进来的路径）
+    name = os.path.basename(name)
+    return name
+
+def _resolve_image_path(images_dir: str, filename: str) -> Optional[str]:
+    """在区分大小写的文件系统上，尽可能匹配实际存在的文件路径。"""
+    sanitized = _sanitize_filename(filename)
+    direct_path = os.path.join(images_dir, sanitized)
+    if os.path.exists(direct_path):
+        return direct_path
+    # 按不区分大小写尝试匹配完整文件名
+    lower_target = sanitized.lower()
+    try:
+        for entry in os.listdir(images_dir):
+            if entry.lower() == lower_target:
+                return os.path.join(images_dir, entry)
+    except FileNotFoundError:
+        return None
+    # 按同名不同扩展尝试
+    stem, ext = os.path.splitext(sanitized)
+    if stem:
+        candidates = glob.glob(os.path.join(images_dir, stem) + ".*")
+        if candidates:
+            # 优先匹配相同扩展（忽略大小写）
+            for c in candidates:
+                if os.path.splitext(c)[1].lower() == ext.lower():
+                    return c
+            return candidates[0]
+    return None
 
 class ImageIndex:
     def __init__(self, index_path: str = "cab/image_index.faiss", 
@@ -190,8 +236,19 @@ class ImageIndex:
                 raise FileNotFoundError(f"Questions CSV file not found: {questions_csv}")
             
             df = pd.read_csv(questions_csv)
-            if 'filename' not in df.columns or 'answer' not in df.columns:
-                raise ValueError("CSV must contain 'filename' and 'answer' columns")
+            
+            # 校验并规范列
+            if 'filename' not in df.columns:
+                raise ValueError("CSV must contain 'filename' column")
+            if 'answer' not in df.columns:
+                df['answer'] = ""
+            
+            # 允许 answer 为空，统一为字符串
+            df['answer'] = df['answer'].fillna("").astype(str)
+            # 规范文件名，去空白与标点
+            df['filename'] = df['filename'].astype(str).map(_sanitize_filename)
+            # 丢弃无效文件名
+            df = df[df['filename'] != ""]
             
             # 初始化特征提取器
             extractor = ImageFeatureExtractor()
@@ -203,29 +260,36 @@ class ImageIndex:
             # 处理每张图像
             success_count = 0
             total_count = len(df)
+            missing_files = 0
             
             for _, row in df.iterrows():
                 filename = row['filename']
                 answer = row['answer']
-                image_path = os.path.join(images_dir, filename)
-                
-                if not os.path.exists(image_path):
-                    logger.warning(f"Image file not found: {image_path}")
+
+                image_path = _resolve_image_path(images_dir, filename)
+                if not image_path or not os.path.exists(image_path):
+                    logger.warning(f"Image file not found: {os.path.join(images_dir, filename)}")
+                    missing_files += 1
                     continue
                 
-                # 提取特征
-                features = extractor.extract_features(image_path)
-                if features is not None:
-                    self.add_image(filename, answer, features)
-                    success_count += 1
-                    
-                    if success_count % 10 == 0:
-                        logger.info(f"Processed {success_count}/{total_count} images")
+                try:
+                    # 提取特征
+                    features = extractor.extract_features(image_path)
+                    if features is not None:
+                        self.add_image(os.path.basename(image_path), answer, features)
+                        success_count += 1
+                        
+                        if success_count % 10 == 0:
+                            logger.info(f"Processed {success_count}/{total_count} images")
+                    else:
+                        logger.warning(f"Feature extraction failed: {filename}")
+                except Exception as ie:
+                    logger.warning(f"Error processing {filename}: {ie}")
             
             # 保存索引
             self.save_index()
             
-            logger.info(f"Index rebuild completed: {success_count}/{total_count} images processed")
+            logger.info(f"Index rebuild completed: {success_count}/{total_count} images processed (missing: {missing_files})")
             return success_count, total_count
             
         except Exception as e:
