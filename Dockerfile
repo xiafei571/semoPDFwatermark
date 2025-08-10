@@ -15,6 +15,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 COPY semoPDFwatermark/ /app/semoPDFwatermark/
 COPY templates/ /app/templates/
 COPY company_matrix/ /app/company_matrix/
+COPY cab/ /app/cab/
+COPY cab_manager.py /app/
+COPY questions.csv /app/
+COPY question-images/ /app/question-images/
 COPY app.py /app/
 COPY main.py /app/
 COPY requirements_web.txt /app/
