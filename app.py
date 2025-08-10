@@ -12,11 +12,19 @@ import tempfile
 import time
 import logging
 import json
+
+# 解决macOS上的OpenMP库冲突和numpy兼容性问题
+os.environ['KMP_DUPLICATE_LIB_OK'] = 'TRUE'
+os.environ['OMP_NUM_THREADS'] = '1'
+os.environ['MKL_NUM_THREADS'] = '1'
+os.environ['OPENBLAS_NUM_THREADS'] = '1'
+os.environ['VECLIB_MAXIMUM_THREADS'] = '1'
+os.environ['NUMEXPR_NUM_THREADS'] = '1'
 from typing import List
 from urllib.parse import quote
 
-from fastapi import FastAPI, File, Form, UploadFile, Request
-from fastapi.responses import FileResponse, HTMLResponse
+from fastapi import FastAPI, File, Form, UploadFile, Request, HTTPException
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
 from fastapi.staticfiles import StaticFiles
 
@@ -60,6 +68,9 @@ def create_app() -> FastAPI:
     
     # 设置静态文件和模板
     app.mount("/static", StaticFiles(directory="static"), name="static")
+    # CAB题目图片静态文件服务
+    if os.path.exists("question-images"):
+        app.mount("/question-images", StaticFiles(directory="question-images"), name="question-images")
     
     # 包含路由
     app.include_router(company_matrix_router, prefix="/company-matrix", tags=["company-matrix"])
@@ -168,6 +179,165 @@ async def pdf_watermark_page(request: Request):
 async def cab_page(request: Request):
     """CAB应用页面"""
     return templates.TemplateResponse("cab.html", {"request": request})
+
+
+@app.post("/cab/upload-image")
+async def upload_image_for_matching(
+    request: Request,
+    image: UploadFile = File(...)
+):
+    """
+    CAB图片上传和相似度匹配接口
+    """
+    logger.info(f"CAB: Received image upload request - {image.filename}")
+    
+    # 验证文件类型
+    if not image.content_type or not image.content_type.startswith('image/'):
+        raise HTTPException(status_code=400, detail="请上传图片文件")
+    
+    try:
+        # 动态导入CAB模块
+        try:
+            from cab.feature_extractor import ImageFeatureExtractor
+            from cab.image_index import ImageIndex
+        except ImportError as e:
+            logger.error(f"CAB modules not available: {e}")
+            raise HTTPException(
+                status_code=500, 
+                detail="图像匹配功能暂不可用，请检查依赖安装"
+            )
+        
+        # 读取上传的图片
+        image_content = await image.read()
+        if not image_content:
+            raise HTTPException(status_code=400, detail="图片文件为空")
+        
+        # 保存临时文件
+        temp_fd, temp_path = tempfile.mkstemp(suffix='.jpg', prefix='cab_upload_')
+        os.close(temp_fd)
+        
+        try:
+            with open(temp_path, "wb") as f:
+                f.write(image_content)
+            
+            # 初始化特征提取器和索引
+            extractor = ImageFeatureExtractor()
+            index = ImageIndex()
+            
+            # 检查索引是否为空
+            stats = index.get_stats()
+            if stats['total_images'] == 0:
+                return JSONResponse({
+                    "success": False,
+                    "message": "题目库为空，请先建立索引",
+                    "matches": [],
+                    "stats": stats
+                })
+            
+            # 提取查询图片特征
+            query_features = extractor.extract_features(temp_path)
+            if query_features is None:
+                raise HTTPException(status_code=400, detail="无法提取图片特征，请检查图片格式")
+            
+            # 搜索相似图片
+            matches = index.search_similar(query_features, top_k=5)
+            
+            logger.info(f"CAB: Found {len(matches)} matches for uploaded image")
+            
+            return JSONResponse({
+                "success": True,
+                "message": f"成功找到 {len(matches)} 个匹配结果",
+                "matches": matches,
+                "stats": stats
+            })
+            
+        finally:
+            # 清理临时文件
+            if os.path.exists(temp_path):
+                os.remove(temp_path)
+    
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.exception("CAB: Error processing image upload")
+        raise HTTPException(status_code=500, detail=f"处理图片时出错: {str(e)}")
+
+
+@app.post("/cab/rebuild-index")
+async def rebuild_image_index(request: Request):
+    """
+    重建图像索引接口
+    """
+    logger.info("CAB: Starting index rebuild request")
+    
+    try:
+        # 动态导入CAB模块
+        try:
+            from cab.image_index import ImageIndex
+        except ImportError as e:
+            logger.error(f"CAB modules not available: {e}")
+            raise HTTPException(
+                status_code=500, 
+                detail="图像索引功能暂不可用，请检查依赖安装"
+            )
+        
+        # 初始化索引
+        index = ImageIndex()
+        
+        # 重建索引
+        success_count, total_count = index.rebuild_index()
+        
+        # 获取统计信息
+        stats = index.get_stats()
+        
+        logger.info(f"CAB: Index rebuild completed - {success_count}/{total_count}")
+        
+        return JSONResponse({
+            "success": True,
+            "message": f"索引重建完成，成功处理 {success_count}/{total_count} 张图片",
+            "success_count": success_count,
+            "total_count": total_count,
+            "stats": stats
+        })
+        
+    except Exception as e:
+        logger.exception("CAB: Error rebuilding index")
+        raise HTTPException(status_code=500, detail=f"重建索引时出错: {str(e)}")
+
+
+@app.get("/cab/stats")
+async def get_index_stats(request: Request):
+    """
+    获取索引统计信息接口
+    """
+    try:
+        # 动态导入CAB模块
+        try:
+            from cab.image_index import ImageIndex
+        except ImportError as e:
+            logger.error(f"CAB modules not available: {e}")
+            return JSONResponse({
+                "success": False,
+                "message": "图像索引功能暂不可用，请安装相关依赖",
+                "stats": {}
+            })
+        
+        # 获取统计信息
+        index = ImageIndex()
+        stats = index.get_stats()
+        
+        return JSONResponse({
+            "success": True,
+            "stats": stats
+        })
+        
+    except Exception as e:
+        logger.exception("CAB: Error getting index stats")
+        return JSONResponse({
+            "success": False,
+            "message": f"获取统计信息时出错: {str(e)}",
+            "stats": {}
+        })
 
 
 @app.post("/add-watermark")

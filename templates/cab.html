@@ -18,85 +18,182 @@
             background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
             min-height: 100vh;
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            display: flex;
-            align-items: center;
-            justify-content: center;
+            padding-top: 80px;
+            padding-bottom: 40px;
         }
         
         .cab-container {
-            text-align: center;
             background: white;
-            border-radius: 30px;
-            padding: 60px 40px;
+            border-radius: 20px;
+            padding: 40px;
             box-shadow: 0 20px 60px rgba(0,0,0,0.1);
-            max-width: 600px;
-            width: 90%;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        .cab-header {
+            text-align: center;
+            margin-bottom: 40px;
         }
         
         .cab-icon {
-            width: 120px;
-            height: 120px;
-            border-radius: 30px;
+            width: 80px;
+            height: 80px;
+            border-radius: 20px;
             background: linear-gradient(135deg, #f093fb, #f5576c);
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 4rem;
+            font-size: 2.5rem;
             color: white;
-            margin: 0 auto 30px;
+            margin: 0 auto 20px;
             box-shadow: 0 10px 30px rgba(240, 147, 251, 0.3);
         }
         
         .cab-title {
-            font-size: 3rem;
+            font-size: 2.5rem;
             font-weight: 700;
             color: #2c3e50;
-            margin-bottom: 20px;
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 10px;
         }
         
         .cab-subtitle {
-            font-size: 1.5rem;
+            font-size: 1.2rem;
             color: #7f8c8d;
-            margin-bottom: 40px;
+            margin-bottom: 0;
         }
         
-        .back-btn {
-            background: linear-gradient(135deg, #667eea, #764ba2);
+        .upload-area {
+            border: 3px dashed #ddd;
+            border-radius: 15px;
+            padding: 50px 20px;
+            text-align: center;
+            margin-bottom: 30px;
+            background: #f8f9fa;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .upload-area:hover, .upload-area.dragover {
+            border-color: #f093fb;
+            background: #fff5ff;
+        }
+        
+        .upload-icon {
+            font-size: 3rem;
+            color: #f093fb;
+            margin-bottom: 15px;
+        }
+        
+        .upload-text {
+            font-size: 1.2rem;
+            color: #6c757d;
+            margin-bottom: 10px;
+        }
+        
+        .upload-hint {
+            font-size: 0.9rem;
+            color: #adb5bd;
+        }
+        
+        .image-preview {
+            max-width: 300px;
+            max-height: 300px;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            margin: 20px auto;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #f093fb, #f5576c);
             border: none;
-            color: white;
-            padding: 15px 35px;
+            padding: 12px 30px;
             border-radius: 25px;
             font-weight: 600;
-            text-decoration: none;
-            display: inline-block;
             transition: all 0.3s ease;
-            font-size: 1.1rem;
         }
         
-        .back-btn:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 8px 20px rgba(102, 126, 234, 0.4);
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(240, 147, 251, 0.4);
+        }
+        
+        .btn-secondary {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            border: none;
+            padding: 12px 30px;
+            border-radius: 25px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+        
+        .btn-secondary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+        
+        .results-container {
+            margin-top: 40px;
+            display: none;
+        }
+        
+        .result-card {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+            border-left: 4px solid #f093fb;
+        }
+        
+        .result-image {
+            max-width: 100px;
+            max-height: 100px;
+            border-radius: 5px;
+        }
+        
+        .similarity-score {
+            background: linear-gradient(135deg, #f093fb, #f5576c);
             color: white;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+        
+        .stats-info {
+            background: #e9ecef;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 20px;
+            font-size: 0.9rem;
+            color: #495057;
+        }
+        
+        .loading {
+            text-align: center;
+            margin: 30px 0;
+        }
+        
+        .spinner-border {
+            color: #f093fb;
         }
         
         @media (max-width: 768px) {
             .cab-container {
-                padding: 40px 20px;
+                margin: 20px;
+                padding: 20px;
             }
             
             .cab-title {
-                font-size: 2.5rem;
+                font-size: 2rem;
             }
             
-            .cab-subtitle {
-                font-size: 1.2rem;
+            .upload-area {
+                padding: 30px 15px;
             }
             
-            .cab-icon {
-                width: 100px;
-                height: 100px;
-                font-size: 3rem;
+            .result-card {
+                padding: 15px;
             }
         }
     </style>
@@ -133,18 +230,333 @@
         </div>
     </nav>
 
-    <div class="cab-container">
-        <div class="cab-icon">
-            <i class="fas fa-taxi"></i>
+    <div class="container">
+        <div class="cab-container">
+            <!-- 页面头部 -->
+            <div class="cab-header">
+                <div class="cab-icon">
+                    <i class="fas fa-search"></i>
+                </div>
+                <h1 class="cab-title">题目图片相似度匹配</h1>
+                <p class="cab-subtitle">上传题目图片，快速找到相似题目和答案</p>
+            </div>
+
+            <!-- 系统状态信息 -->
+            <div class="stats-info" id="statsInfo">
+                <i class="fas fa-info-circle"></i> 正在加载系统信息...
+            </div>
+
+            <!-- 图片上传区域 -->
+            <div class="upload-area" id="uploadArea">
+                <div class="upload-icon">
+                    <i class="fas fa-cloud-upload-alt"></i>
+                </div>
+                <div class="upload-text">点击或拖拽图片到此处上传</div>
+                <div class="upload-hint">支持 JPG, PNG, GIF 等图片格式</div>
+                <input type="file" id="imageInput" accept="image/*" style="display: none;">
+            </div>
+
+            <!-- 图片预览 -->
+            <div id="imagePreview" style="display: none; text-align: center;">
+                <img id="previewImg" class="image-preview" alt="预览图片">
+                <div class="mt-3">
+                    <button class="btn btn-primary me-2" id="uploadBtn">
+                        <i class="fas fa-search"></i> 开始匹配
+                    </button>
+                    <button class="btn btn-secondary" id="clearBtn">
+                        <i class="fas fa-trash"></i> 清除图片
+                    </button>
+                </div>
+            </div>
+
+            <!-- 加载状态 -->
+            <div class="loading" id="loadingDiv" style="display: none;">
+                <div class="spinner-border" role="status">
+                    <span class="visually-hidden">处理中...</span>
+                </div>
+                <p class="mt-3">正在匹配相似题目，请稍候...</p>
+            </div>
+
+            <!-- 匹配结果 -->
+            <div class="results-container" id="resultsContainer">
+                <h3><i class="fas fa-list"></i> 匹配结果</h3>
+                <div id="resultsList"></div>
+            </div>
+
+            <!-- 管理功能 -->
+            <div class="text-center mt-4">
+                <button class="btn btn-secondary me-2" id="rebuildBtn">
+                    <i class="fas fa-sync"></i> 重建索引
+                </button>
+                <a href="/" class="btn btn-secondary">
+                    <i class="fas fa-home"></i> 返回首页
+                </a>
+            </div>
         </div>
-        <h1 class="cab-title">HELLO CAB</h1>
-        <p class="cab-subtitle">欢迎来到CAB应用！</p>
-        
-        <a href="/" class="back-btn">
-            <i class="fas fa-home"></i> 返回首页
-        </a>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // DOM元素引用
+            const uploadArea = document.getElementById('uploadArea');
+            const imageInput = document.getElementById('imageInput');
+            const imagePreview = document.getElementById('imagePreview');
+            const previewImg = document.getElementById('previewImg');
+            const uploadBtn = document.getElementById('uploadBtn');
+            const clearBtn = document.getElementById('clearBtn');
+            const loadingDiv = document.getElementById('loadingDiv');
+            const resultsContainer = document.getElementById('resultsContainer');
+            const resultsList = document.getElementById('resultsList');
+            const rebuildBtn = document.getElementById('rebuildBtn');
+            const statsInfo = document.getElementById('statsInfo');
+            
+            let selectedFile = null;
+            
+            // 加载系统统计信息
+            loadStats();
+            
+            // 上传区域点击事件
+            uploadArea.addEventListener('click', () => {
+                imageInput.click();
+            });
+            
+            // 文件选择事件
+            imageInput.addEventListener('change', function(e) {
+                const file = e.target.files[0];
+                if (file) {
+                    handleFileSelection(file);
+                }
+            });
+            
+            // 拖拽事件
+            uploadArea.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                uploadArea.classList.add('dragover');
+            });
+            
+            uploadArea.addEventListener('dragleave', (e) => {
+                e.preventDefault();
+                uploadArea.classList.remove('dragover');
+            });
+            
+            uploadArea.addEventListener('drop', (e) => {
+                e.preventDefault();
+                uploadArea.classList.remove('dragover');
+                
+                const files = e.dataTransfer.files;
+                if (files.length > 0) {
+                    handleFileSelection(files[0]);
+                }
+            });
+            
+            // 处理文件选择
+            function handleFileSelection(file) {
+                // 验证文件类型
+                if (!file.type.startsWith('image/')) {
+                    showAlert('请选择图片文件！', 'warning');
+                    return;
+                }
+                
+                // 验证文件大小 (最大10MB)
+                if (file.size > 10 * 1024 * 1024) {
+                    showAlert('图片文件太大，请选择小于10MB的图片！', 'warning');
+                    return;
+                }
+                
+                selectedFile = file;
+                
+                // 显示预览
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    previewImg.src = e.target.result;
+                    uploadArea.style.display = 'none';
+                    imagePreview.style.display = 'block';
+                    resultsContainer.style.display = 'none';
+                };
+                reader.readAsDataURL(file);
+            }
+            
+            // 上传匹配按钮事件
+            uploadBtn.addEventListener('click', function() {
+                if (!selectedFile) {
+                    showAlert('请先选择图片文件！', 'warning');
+                    return;
+                }
+                
+                uploadImageForMatching();
+            });
+            
+            // 清除按钮事件
+            clearBtn.addEventListener('click', function() {
+                selectedFile = null;
+                imageInput.value = '';
+                uploadArea.style.display = 'block';
+                imagePreview.style.display = 'none';
+                resultsContainer.style.display = 'none';
+                loadingDiv.style.display = 'none';
+            });
+            
+            // 重建索引按钮事件
+            rebuildBtn.addEventListener('click', function() {
+                if (confirm('确定要重建索引吗？这个过程可能需要几分钟时间。')) {
+                    rebuildIndex();
+                }
+            });
+            
+            // 上传图片进行匹配
+            async function uploadImageForMatching() {
+                if (!selectedFile) return;
+                
+                loadingDiv.style.display = 'block';
+                resultsContainer.style.display = 'none';
+                
+                const formData = new FormData();
+                formData.append('image', selectedFile);
+                
+                try {
+                    const response = await fetch('/cab/upload-image', {
+                        method: 'POST',
+                        body: formData
+                    });
+                    
+                    const data = await response.json();
+                    
+                    loadingDiv.style.display = 'none';
+                    
+                    if (data.success) {
+                        displayResults(data.matches);
+                        showAlert(data.message, 'success');
+                    } else {
+                        showAlert(data.message || '匹配失败，请重试', 'danger');
+                    }
+                    
+                } catch (error) {
+                    loadingDiv.style.display = 'none';
+                    console.error('Upload error:', error);
+                    showAlert('网络错误，请检查连接后重试', 'danger');
+                }
+            }
+            
+            // 显示匹配结果
+            function displayResults(matches) {
+                if (!matches || matches.length === 0) {
+                    resultsList.innerHTML = '<div class="text-center text-muted">未找到相似的题目</div>';
+                    resultsContainer.style.display = 'block';
+                    return;
+                }
+                
+                let html = '';
+                matches.forEach((match, index) => {
+                    const similarityPercent = (match.similarity * 100).toFixed(1);
+                    html += `
+                        <div class="result-card">
+                            <div class="row align-items-center">
+                                <div class="col-md-2">
+                                    <img src="/question-images/${match.filename}" 
+                                         class="result-image img-fluid" 
+                                         alt="题目图片"
+                                         onerror="this.src='data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgZmlsbD0iI2VlZSIvPjx0ZXh0IHg9IjUwIiB5PSI1MCIgZm9udC1zaXplPSIxMiIgZmlsbD0iIzk5OSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZHk9Ii4zZW0iPuaXoOazleeUn+aIkDwvdGV4dD48L3N2Zz4='">
+                                </div>
+                                <div class="col-md-7">
+                                    <h5>题目 ${index + 1}: ${match.filename}</h5>
+                                    <p class="mb-2"><strong>答案：</strong>${match.answer}</p>
+                                    <small class="text-muted">文件名: ${match.filename}</small>
+                                </div>
+                                <div class="col-md-3 text-end">
+                                    <div class="similarity-score">
+                                        相似度: ${similarityPercent}%
+                                    </div>
+                                    <small class="text-muted d-block mt-1">排名: #${match.rank}</small>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                });
+                
+                resultsList.innerHTML = html;
+                resultsContainer.style.display = 'block';
+            }
+            
+            // 重建索引
+            async function rebuildIndex() {
+                rebuildBtn.disabled = true;
+                rebuildBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 重建中...';
+                
+                try {
+                    const response = await fetch('/cab/rebuild-index', {
+                        method: 'POST'
+                    });
+                    
+                    const data = await response.json();
+                    
+                    if (data.success) {
+                        showAlert(data.message, 'success');
+                        loadStats(); // 重新加载统计信息
+                    } else {
+                        showAlert(data.message || '重建索引失败', 'danger');
+                    }
+                    
+                } catch (error) {
+                    console.error('Rebuild error:', error);
+                    showAlert('网络错误，请检查连接后重试', 'danger');
+                } finally {
+                    rebuildBtn.disabled = false;
+                    rebuildBtn.innerHTML = '<i class="fas fa-sync"></i> 重建索引';
+                }
+            }
+            
+            // 加载系统统计信息
+            async function loadStats() {
+                try {
+                    const response = await fetch('/cab/stats');
+                    const data = await response.json();
+                    
+                    if (data.success) {
+                        const stats = data.stats;
+                        statsInfo.innerHTML = `
+                            <i class="fas fa-info-circle"></i> 
+                            系统状态: 题目库包含 <strong>${stats.total_images}</strong> 张图片，
+                            索引维度 <strong>${stats.feature_dimension}</strong>，
+                            索引状态: ${stats.index_exists ? '<span class="text-success">已建立</span>' : '<span class="text-warning">未建立</span>'}
+                        `;
+                    } else {
+                        statsInfo.innerHTML = `
+                            <i class="fas fa-exclamation-triangle"></i> 
+                            <span class="text-warning">${data.message}</span>
+                        `;
+                    }
+                } catch (error) {
+                    console.error('Stats error:', error);
+                    statsInfo.innerHTML = `
+                        <i class="fas fa-exclamation-triangle"></i> 
+                        <span class="text-danger">无法加载系统信息</span>
+                    `;
+                }
+            }
+            
+            // 显示提示信息
+            function showAlert(message, type) {
+                // 创建alert元素
+                const alertDiv = document.createElement('div');
+                alertDiv.className = `alert alert-${type} alert-dismissible fade show`;
+                alertDiv.innerHTML = `
+                    ${message}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                `;
+                
+                // 插入到页面顶部
+                const container = document.querySelector('.cab-container');
+                container.insertBefore(alertDiv, container.firstChild);
+                
+                // 5秒后自动消失
+                setTimeout(() => {
+                    if (alertDiv.parentNode) {
+                        alertDiv.remove();
+                    }
+                }, 5000);
+            }
+        });
+    </script>
 </body>
 </html>

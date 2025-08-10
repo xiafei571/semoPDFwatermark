@@ -1,7 +1,18 @@
 {
   "permissions": {
     "allow": [
-      "Bash(python3:*)"
+      "Bash(python3:*)",
+      "Bash(mkdir:*)",
+      "Bash(chmod:*)",
+      "Bash(pip install:*)",
+      "Bash(pip --version)",
+      "Bash(python:*)",
+      "Bash(export KMP_DUPLICATE_LIB_OK=TRUE)",
+      "Bash(/Users/feixia/code/animePic/.venv/semoPDFwatermark/bin/python -m pip install torch torchvision transformers open-clip-torch faiss-cpu opencv-python)",
+      "Bash(pkill:*)",
+      "Bash(/Users/feixia/code/animePic/.venv/semoPDFwatermark/bin/python test_cab_safe.py)",
+      "Bash(/Users/feixia/code/animePic/.venv/semoPDFwatermark/bin/python test_cab_matching.py)",
+      "Bash(/Users/feixia/code/animePic/.venv/semoPDFwatermark/bin/python -m pip list --format=freeze)"
     ],
     "deny": []
   }
