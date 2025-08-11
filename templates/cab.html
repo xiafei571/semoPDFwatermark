@@ -253,7 +253,15 @@
                 </div>
                 <div class="upload-text">点击或拖拽图片到此处上传</div>
                 <div class="upload-hint">支持 JPG, PNG, GIF 等图片格式</div>
-                <input type="file" id="imageInput" accept="image/*" style="display: none;">
+                <input type="file" id="imageInput" accept="image/*" capture="environment" style="display: none;">
+                <div class="mt-3 d-flex gap-2 justify-content-center flex-wrap">
+                    <button class="btn btn-primary" onclick="document.getElementById('imageInput').click()">
+                        <i class="fas fa-folder-open"></i> 选择图片
+                    </button>
+                    <button class="btn btn-success" onclick="openCamera()">
+                        <i class="fas fa-camera"></i> 拍照
+                    </button>
+                </div>
             </div>
 
             <!-- 图片预览 -->
@@ -613,6 +621,102 @@
                 
                 modal.show();
             };
+
+            // 预热相机功能（在页面加载时）
+            let cameraWarmedUp = false;
+            
+            // 打开相机拍照
+            window.openCamera = function() {
+                console.log('开始打开相机...');
+                
+                // 如果是第一次使用相机，先进行预热
+                if (!cameraWarmedUp) {
+                    console.log('首次使用相机，进行预热...');
+                    cameraWarmedUp = true;
+                    
+                    // 创建一个隐藏的预热输入框，激活权限
+                    const warmupInput = document.createElement('input');
+                    warmupInput.type = 'file';
+                    warmupInput.accept = 'image/*';
+                    warmupInput.style.position = 'absolute';
+                    warmupInput.style.left = '-9999px';
+                    document.body.appendChild(warmupInput);
+                    
+                    setTimeout(() => {
+                        if (document.body.contains(warmupInput)) {
+                            document.body.removeChild(warmupInput);
+                        }
+                        // 预热完成后再次调用相机
+                        actualOpenCamera();
+                    }, 100);
+                    return;
+                }
+                
+                actualOpenCamera();
+            };
+            
+            // 实际打开相机的函数
+            function actualOpenCamera() {
+                
+                // 创建一个专门用于拍照的文件输入框
+                const cameraInput = document.createElement('input');
+                cameraInput.type = 'file';
+                cameraInput.accept = 'image/*';
+                cameraInput.capture = 'environment'; // 使用后置摄像头
+                cameraInput.style.display = 'none';
+                
+                // 添加多个事件监听器
+                cameraInput.onchange = function(e) {
+                    console.log('相机input change事件触发', e.target.files);
+                    handleCameraResult(e.target.files, cameraInput);
+                };
+                
+                cameraInput.oninput = function(e) {
+                    console.log('相机input input事件触发', e.target.files);
+                    handleCameraResult(e.target.files, cameraInput);
+                };
+                
+                // 添加焦点返回监听（用户从相机应用返回时）
+                const handleFocusReturn = function() {
+                    console.log('页面重新获得焦点');
+                    setTimeout(() => {
+                        if (cameraInput.files && cameraInput.files.length > 0) {
+                            console.log('延迟检查到文件:', cameraInput.files);
+                            handleCameraResult(cameraInput.files, cameraInput);
+                        } else {
+                            console.log('焦点返回但没有文件，清理输入框');
+                            if (document.body.contains(cameraInput)) {
+                                document.body.removeChild(cameraInput);
+                            }
+                            window.removeEventListener('focus', handleFocusReturn);
+                        }
+                    }, 500); // 给相机应用一些时间来设置文件
+                };
+                
+                window.addEventListener('focus', handleFocusReturn);
+                
+                document.body.appendChild(cameraInput);
+                cameraInput.click();
+                console.log('相机输入框已点击');
+            }
+            
+            // 处理相机拍照结果
+            function handleCameraResult(files, inputElement) {
+                if (files && files.length > 0) {
+                    console.log('处理相机结果:', files[0]);
+                    selectedFile = files[0];
+                    displayImagePreview(selectedFile);
+                    showAlert('照片已选择，可以开始匹配！', 'success');
+                }
+                
+                // 清理输入框
+                if (inputElement && document.body.contains(inputElement)) {
+                    document.body.removeChild(inputElement);
+                }
+                
+                // 移除焦点监听器
+                window.removeEventListener('focus', arguments.callee);
+            }
 
             // 重建索引
             async function rebuildIndex() {
