@@ -9,6 +9,7 @@ import sys
 import argparse
 import logging
 from typing import Optional
+import numpy as np
 
 # 添加项目根目录到Python路径
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
@@ -113,15 +114,33 @@ def test_matching(image_path: str, top_k: int = 5):
         
         # 搜索匹配
         matches = index.search_similar(features, top_k)
+
+        # 计算校准后的置信度（在Top-K内部做温度Softmax，默认T=0.25）
+        if matches:
+            sims = np.array([m['similarity'] for m in matches], dtype=np.float32)
+            temp = float(os.environ.get("CAB_SCORE_TEMP", 0.1))
+            temp = max(1e-3, min(5.0, temp))
+            # 数值稳定：先减最大值
+            logits = sims - sims.max()
+            probs = np.exp(logits / temp)
+            probs = probs / (probs.sum() + 1e-12)
+        else:
+            probs = np.array([])
         
         print(f"\n=== 匹配结果 (Top {len(matches)}) ===")
         for i, match in enumerate(matches):
-            similarity_percent = match['similarity'] * 100
+            cosine_percent = match['similarity'] * 100
+            prob_percent = (probs[i] * 100) if probs.size else 0.0
             print(f"{i+1}. 文件: {match['filename']}")
-            print(f"   相似度: {similarity_percent:.1f}%")
+            print(f"   余弦相似度: {cosine_percent:.1f}%  |  校准置信度: {prob_percent:.1f}% (T={float(os.environ.get('CAB_SCORE_TEMP', 0.25))})")
             print(f"   答案: {match['answer']}")
             print(f"   排名: #{match['rank']}")
             print("-" * 40)
+
+        # 额外输出Top-1与Top-2的差距，帮助判断难度
+        if len(matches) >= 2:
+            margin = matches[0]['similarity'] - matches[1]['similarity']
+            print(f"Top1-Top2 余弦相似度差距: {margin:.4f}")
         
         return True
         

@@ -292,6 +292,79 @@
                     <i class="fas fa-home"></i> 返回首页
                 </a>
             </div>
+
+                <!-- 调参面板 -->
+                <div class="mt-5">
+                    <button class="btn btn-outline-primary" type="button" data-bs-toggle="collapse" data-bs-target="#tuningPanel" aria-expanded="false" aria-controls="tuningPanel">
+                        <i class="fas fa-sliders-h"></i> 调试参数
+                    </button>
+                    <div class="collapse mt-3" id="tuningPanel">
+                        <div class="card card-body">
+                            <div class="row g-3">
+                                <div class="col-md-3">
+                                    <label class="form-label">置信度温度 (CAB_SCORE_TEMP)</label>
+                                    <input type="number" step="0.01" min="0.01" max="5" class="form-control" id="cfgTemp" value="0.25">
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label">启用二阶段重排 (CAB_ORB_RERANK)</label>
+                                    <select class="form-select" id="cfgRerank">
+                                        <option value="1" selected>开启</option>
+                                        <option value="0">关闭</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label">重排模式 (CAB_RERANK_MODE)</label>
+                                    <select class="form-select" id="cfgMode">
+                                        <option value="blend" selected>blend</option>
+                                        <option value="orb_only">orb_only</option>
+                                        <option value="max">max</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label">ORB权重 (CAB_ORB_WEIGHT)</label>
+                                    <input type="number" step="0.01" min="0" max="1" class="form-control" id="cfgOrbW" value="0.45">
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label">ORB Lowe比例阈值 (CAB_ORB_RATIO)</label>
+                                    <input type="number" step="0.01" min="0.1" max="0.99" class="form-control" id="cfgOrbRatio" value="0.75">
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label">ORB特征数 (CAB_ORB_NFEATURES)</label>
+                                    <input type="number" min="100" max="5000" class="form-control" id="cfgOrbFeat" value="500">
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label">第一阶段最小归一化相似度 (CAB_ORB_MIN_SIM)</label>
+                                    <input type="number" step="0.01" min="0" max="1" class="form-control" id="cfgMinSim" value="0.0">
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label">ORB强匹配加分阈值 (CAB_ORB_BOOST_THRESH)</label>
+                                    <input type="number" step="0.01" min="0" max="1" class="form-control" id="cfgBoostTh" value="0.0">
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label">加分幅度 (CAB_ORB_BOOST)</label>
+                                    <input type="number" step="0.01" min="0" max="1" class="form-control" id="cfgBoost" value="0.0">
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label">ROI 搜索区域 (CAB_ROI_SEARCH_RATIO)</label>
+                                    <input type="number" step="0.01" min="0.4" max="0.95" class="form-control" id="cfgRoiSearch" value="0.8">
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label">ROI 最小区域比 (CAB_ROI_MIN_AREA_FRAC)</label>
+                                    <input type="number" step="0.0005" min="0.0005" max="0.02" class="form-control" id="cfgRoiMinArea" value="0.002">
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label">ROI 边距像素 (CAB_ROI_PAD)</label>
+                                    <input type="number" min="0" max="32" class="form-control" id="cfgRoiPad" value="8">
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">ROI 回退裁剪 (CAB_FOCUS_REGION)</label>
+                                    <input type="text" class="form-control" id="cfgFocusRegion" value="top_left:0.65">
+                                    <small class="text-muted">格式: top_left:0.65 或 center:0.6</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
         </div>
     </div>
 
@@ -413,6 +486,23 @@
                 
                 const formData = new FormData();
                 formData.append('image', selectedFile);
+                // 采集调参配置
+                const cfg = {
+                    CAB_SCORE_TEMP: parseFloat(document.getElementById('cfgTemp').value || '0.25'),
+                    CAB_ORB_RERANK: document.getElementById('cfgRerank').value,
+                    CAB_RERANK_MODE: document.getElementById('cfgMode').value,
+                    CAB_ORB_WEIGHT: parseFloat(document.getElementById('cfgOrbW').value || '0.45'),
+                    CAB_ORB_RATIO: parseFloat(document.getElementById('cfgOrbRatio').value || '0.75'),
+                    CAB_ORB_NFEATURES: parseInt(document.getElementById('cfgOrbFeat').value || '500'),
+                    CAB_ORB_MIN_SIM: parseFloat(document.getElementById('cfgMinSim').value || '0.0'),
+                    CAB_ORB_BOOST_THRESH: parseFloat(document.getElementById('cfgBoostTh').value || '0.0'),
+                    CAB_ORB_BOOST: parseFloat(document.getElementById('cfgBoost').value || '0.0'),
+                    CAB_ROI_SEARCH_RATIO: parseFloat(document.getElementById('cfgRoiSearch').value || '0.8'),
+                    CAB_ROI_MIN_AREA_FRAC: parseFloat(document.getElementById('cfgRoiMinArea').value || '0.002'),
+                    CAB_ROI_PAD: parseInt(document.getElementById('cfgRoiPad').value || '8'),
+                    CAB_FOCUS_REGION: document.getElementById('cfgFocusRegion').value || 'top_left:0.65'
+                };
+                formData.append('config', JSON.stringify(cfg));
                 
                 try {
                     const response = await fetch('/cab/upload-image', {
@@ -448,7 +538,13 @@
                 
                 let html = '';
                 matches.forEach((match, index) => {
-                    const similarityPercent = (match.similarity * 100).toFixed(1);
+                    // 优先显示后端校准后的置信度，如果没有则退化为相似度
+                    const displayPercent = (match.confidence_percent !== undefined)
+                        ? match.confidence_percent.toFixed(1)
+                        : (match.similarity * 100).toFixed(1);
+                    const subtitle = (match.confidence_percent !== undefined)
+                        ? `相似度: ${(match.similarity * 100).toFixed(1)}%`
+                        : '';
                     html += `
                         <div class="result-card">
                             <div class="row align-items-center">
@@ -465,8 +561,9 @@
                                 </div>
                                 <div class="col-md-3 text-end">
                                     <div class="similarity-score">
-                                        相似度: ${similarityPercent}%
+                                        置信度: ${displayPercent}%
                                     </div>
+                                    ${subtitle ? `<small class="text-muted d-block mt-1">${subtitle}</small>` : ''}
                                     <small class="text-muted d-block mt-1">排名: #${match.rank}</small>
                                 </div>
                             </div>

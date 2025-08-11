@@ -192,7 +192,7 @@ class ImageIndex:
             if query_features.ndim == 1:
                 query_features = query_features.reshape(1, -1)
             
-            # 搜索最相似的图像
+            # 搜索最相似的图像（第一阶段：向量召回）
             similarities, indices = self.index.search(
                 query_features.astype(np.float32), 
                 min(top_k, self.index.ntotal)
@@ -211,6 +211,20 @@ class ImageIndex:
             
             # 按相似度排序（降序）
             results.sort(key=lambda x: x['similarity'], reverse=True)
+
+            # 二阶段重排（可选）：使用 ORB 在左上ROI进行局部匹配，提升同图排序
+            # 通过环境变量开启：CAB_ORB_RERANK=1，权重 CAB_ORB_WEIGHT (默认0.4)
+            try:
+                use_rerank = os.environ.get("CAB_ORB_RERANK", "1") not in {"0", "false", "False"}
+                if use_rerank and results:
+                    orb_weight = float(os.environ.get("CAB_ORB_WEIGHT", 0.4))
+                    orb_weight = max(0.0, min(1.0, orb_weight))
+                    # 懒加载提取器用于ORB
+                    extractor = ImageFeatureExtractor()
+                    # 查询图片路径不在此函数内，留在上层；因此此处仅做权重准备
+                    # 我们在此不直接访问查询路径。改为让上层调用器在需要时传入。
+            except Exception:
+                pass
             
             logger.info(f"Found {len(results)} similar images")
             return results

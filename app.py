@@ -13,6 +13,7 @@ import tempfile
 import time
 import logging
 import json
+import numpy as np
 
 # 确保 /app 在 Python 路径中（Cloud Run 工作目录）
 sys.path.insert(0, os.path.abspath(os.environ.get("PYTHONPATH_INSERT", "/app")))
@@ -188,7 +189,8 @@ async def cab_page(request: Request):
 @app.post("/cab/upload-image")
 async def upload_image_for_matching(
     request: Request,
-    image: UploadFile = File(...)
+    image: UploadFile = File(...),
+    config: str = Form(None)
 ):
     """
     CAB图片上传和相似度匹配接口
@@ -211,6 +213,16 @@ async def upload_image_for_matching(
                 detail="图像匹配功能暂不可用，请检查依赖安装"
             )
         
+        # 解析调参配置（通过前端传来的 JSON 串 config，可选）
+        overrides = {}
+        try:
+            if config:
+                overrides = json.loads(config)
+                if not isinstance(overrides, dict):
+                    overrides = {}
+        except Exception:
+            overrides = {}
+
         # 读取上传的图片
         image_content = await image.read()
         if not image_content:
@@ -238,27 +250,120 @@ async def upload_image_for_matching(
                     "stats": stats
                 })
             
-            # 提取查询图片特征
-            query_features = extractor.extract_features(temp_path)
+            # 临时覆盖环境变量进行一次性调参
+            from contextlib import contextmanager
+            @contextmanager
+            def temp_environ(env_overrides: dict):
+                saved = {}
+                try:
+                    for k, v in env_overrides.items():
+                        saved[k] = os.environ.get(k)
+                        os.environ[k] = str(v)
+                    yield
+                finally:
+                    for k, old in saved.items():
+                        if old is None:
+                            os.environ.pop(k, None)
+                        else:
+                            os.environ[k] = old
+
+            with temp_environ(overrides):
+                # 提取查询图片特征
+                query_features = extractor.extract_features(temp_path)
             if query_features is None:
                 raise HTTPException(status_code=400, detail="无法提取图片特征，请检查图片格式")
             
-            # 搜索相似图片
+            # 搜索相似图片（第一阶段：向量召回）
             matches = index.search_similar(query_features, top_k=5)
             
             logger.info(f"CAB: Found {len(matches)} matches for uploaded image")
             
-            return JSONResponse({
+            # 二阶段重排（可选）：左上角ROI的 ORB 局部匹配
+            try:
+                # 优先读取 overrides 中的值
+                def get_conf(name: str, default_value: str):
+                    return str(overrides.get(name, os.environ.get(name, default_value)))
+                use_rerank = get_conf("CAB_ORB_RERANK", "1") not in {"0", "false", "False"}
+                if use_rerank and matches:
+                    from cab.feature_extractor import ImageFeatureExtractor as _IFE
+                    orb_weight = float(get_conf("CAB_ORB_WEIGHT", "0.45"))
+                    orb_weight = max(0.0, min(1.0, orb_weight))
+                    orb_min_sim = float(get_conf("CAB_ORB_MIN_SIM", "0.0"))
+                    rerank_mode = get_conf("CAB_RERANK_MODE", "blend").lower()  # blend | orb_only | max
+                    boost_thresh = float(get_conf("CAB_ORB_BOOST_THRESH", "0.0"))
+                    boost_add = float(get_conf("CAB_ORB_BOOST", "0.0"))
+
+                    # 归一化第一阶段相似度到[0,1]
+                    sims = np.array([m['similarity'] for m in matches], dtype=np.float32)
+                    s_min, s_max = float(sims.min()), float(sims.max())
+                    denom = (s_max - s_min) if (s_max - s_min) > 1e-8 else 1.0
+                    norm_sims = (sims - s_min) / denom
+
+                    # ORB 比较
+                    # 使用 overrides 覆盖 ORB 相关环境变量
+                    with temp_environ(overrides):
+                        orb_extractor = _IFE()
+                    for i, m in enumerate(matches):
+                        candidate_path = os.path.join("question-images", m['filename'])
+                        if norm_sims[i] >= orb_min_sim and os.path.exists(candidate_path):
+                            with temp_environ(overrides):
+                                orb_sim = orb_extractor.compute_orb_similarity(temp_path, candidate_path)
+                        else:
+                            orb_sim = 0.0
+                        m['orb_similarity'] = float(orb_sim)
+                        # 组合策略
+                        if rerank_mode == "orb_only":
+                            combined = orb_sim
+                        elif rerank_mode == "max":
+                            combined = max(norm_sims[i], orb_weight * orb_sim)
+                        else:  # blend
+                            combined = (1.0 - orb_weight) * norm_sims[i] + orb_weight * orb_sim
+                        # 可选boost：当ORB很强时直接加分
+                        if boost_thresh > 0 and orb_sim >= boost_thresh:
+                            combined = min(1.0, combined + max(0.0, boost_add))
+                        m['combined'] = float(combined)
+
+                    # 按组合分数排序
+                    matches.sort(key=lambda x: x.get('combined', 0.0), reverse=True)
+            except Exception as e:
+                logger.warning(f"ORB rerank skipped due to error: {e}")
+
+            # 在Top-K内做温度Softmax校准，得到更有区分度的置信度（对 combined 或 similarity 应用）
+            try:
+                if matches:
+                    sims_for_cal = np.array([
+                        (m['combined'] if 'combined' in m else m['similarity']) for m in matches
+                    ], dtype=np.float32)
+                    temp = float(overrides.get("CAB_SCORE_TEMP", os.environ.get("CAB_SCORE_TEMP", 0.25)))
+                    temp = max(1e-3, min(5.0, temp))
+                    logits = sims_for_cal - sims_for_cal.max()
+                    probs = np.exp(logits / temp)
+                    probs = probs / (probs.sum() + 1e-12)
+                    for i, m in enumerate(matches):
+                        m['confidence'] = float(probs[i])
+                        m['similarity_percent'] = float(m['similarity'] * 100.0)
+                        m['confidence_percent'] = float(probs[i] * 100.0)
+                else:
+                    temp = float(os.environ.get("CAB_SCORE_TEMP", 0.25))
+                    probs = np.array([])
+            except Exception:
+                temp = float(overrides.get("CAB_SCORE_TEMP", os.environ.get("CAB_SCORE_TEMP", 0.25)))
+                probs = np.array([])
+
+            response_payload = {
                 "success": True,
                 "message": f"成功找到 {len(matches)} 个匹配结果",
                 "matches": matches,
+                "score_calibration": {"temperature": temp},
                 "stats": stats
-            })
+            }
             
         finally:
             # 清理临时文件
             if os.path.exists(temp_path):
                 os.remove(temp_path)
+        
+        return JSONResponse(response_payload)
     
     except HTTPException:
         raise
